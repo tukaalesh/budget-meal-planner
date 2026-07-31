@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../bloc/meal_history_bloc.dart';
 import '../../recommendations/models/meal_model.dart';
-import '../../recommendations/screens/meal_detail_screen.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_widgets.dart';
 

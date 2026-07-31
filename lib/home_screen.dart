@@ -656,17 +656,15 @@ class _ProfileTab extends StatelessWidget {
                       ],
                       _ProfileSection(title: 'الحساب', children: [
                         ListTile(
-                          leading: Icon(Icons.family_restroom_rounded,
-                              color: AppColors.accent),
-                          title: Text('تعديل معلومات العائلة',
-                              style: GoogleFonts.cairo(
-                                  fontSize: 14, fontWeight: FontWeight.w500)),
-                          trailing: Icon(Icons.arrow_back_ios_rounded,
-                              size: 14, color: AppColors.textHint),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 4),
-                          onTap: () =>
-                              Navigator.of(context).pushNamed('/family'),
-                        ),
+                            leading: Icon(Icons.family_restroom_rounded,
+                                color: AppColors.accent),
+                            title: Text('تعديل معلومات العائلة',
+                                style: GoogleFonts.cairo(
+                                    fontSize: 14, fontWeight: FontWeight.w500)),
+                            trailing: Icon(Icons.arrow_back_ios_rounded,
+                                size: 14, color: AppColors.textHint),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 4),
+                            onTap: () {}),
                         Divider(color: AppColors.divider, height: 1),
                         ListTile(
                           leading: Icon(Icons.logout_rounded,
