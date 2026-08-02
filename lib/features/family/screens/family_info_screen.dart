@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sho_htghadona/main.dart';
 import '../bloc/family_bloc.dart';
 import '../models/family_model.dart';
 import '../../../core/theme/app_theme.dart';
@@ -30,13 +32,20 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
   final Set<String> _availableBasics = {};
   final Set<String> _allergies = {};
 
-  void _submit() {
-    //ماتنسي  هون تضيفي التوكن بس ترفع هبة اللوغ ان
-    // from tuka to tuka ❤️
-    final token = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+  void _submit() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("حدث خطأ ما يُرجى إعادة المحاولة"),
+        ),
+      );
+      return;
+    }
 
     context.read<FamilyBloc>().add(FamilyInfoSubmitted(
-          token: "4|59Lnb0kybgG3smdNG7KUObcvdVOueHlMiLSUwtxr07ba8964",
+          token: token,
           family: FamilyModel(
             memberCount: _memberCount,
             favoriteDishes: _favoriteDishes.toList(),

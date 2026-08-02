@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_repository.dart';
+import 'package:sho_htghadona/main.dart';
 import 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
@@ -11,28 +13,28 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   Future<void> register({
-  required String name,
-  required String email,
-  required String password,
-}) async {
-  emit(AuthLoading());
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    emit(AuthLoading());
 
-  try {
-    await authRepository.register(
-      name: name,
-      email: email,
-      password: password,
-    );
+    try {
+      await authRepository.register(
+        name: name,
+        email: email,
+        password: password,
+      );
 
-    emit(AuthRegisterSuccess());
-  } catch (e) {
-    emit(
-      AuthFailure(
-        e.toString().replaceFirst('Exception: ', ''),
-      ),
-    );
+      emit(AuthRegisterSuccess());
+    } catch (e) {
+      emit(
+        AuthFailure(
+          e.toString().replaceFirst('Exception: ', ''),
+        ),
+      );
+    }
   }
-}
 
   Future<void> login({
     required String email,
@@ -41,20 +43,24 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     try {
       final user = await authRepository.login(email: email, password: password);
-      print('token: ${user.token}'); 
+      // final token = user.token;
+      // print(sharedPreferences);
+      // await sharedPreferences.setString('token', token);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', user.token);
+      print('token: ${user.token}');
       emit(AuthSuccess(user));
     } catch (e) {
       emit(AuthFailure(e.toString().replaceFirst('Exception: ', '')));
     }
   }
 
-Future<void> logout() async {
+  Future<void> logout() async {
     final currentState = state;
     if (currentState is AuthSuccess) {
       try {
         await authRepository.logout(currentState.user.token);
-      } catch (_) {
-      }
+      } catch (_) {}
     }
     emit(AuthLoggedOut());
   }
