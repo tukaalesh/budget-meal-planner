@@ -594,7 +594,7 @@ class _NoMealsYetCard extends StatelessWidget {
   }
 }
 
-// ── Profile Tab ──────────────────────────────────────────────────────────────
+// ── Profile Tab 
 
 class _ProfileTab extends StatelessWidget {
   const _ProfileTab();
@@ -687,15 +687,15 @@ class _ProfileTab extends StatelessWidget {
                               icon: Icons.group_rounded,
                               label: 'عدد الأفراد',
                               value: '${family.memberCount} أفراد'),
-                          _ProfileRow(
-                              icon: Icons.calendar_view_week_outlined,
-                              label: 'تكرار الطبخ',
-                              value: family.cookingFrequency),
-                          _ProfileRow(
-                              icon: Icons.delivery_dining_outlined,
-                              label: 'أيام الديليفري',
-                              value:
-                                  '${family.deliveryDaysPerWeek} أيام / أسبوع'),
+                          // _ProfileRow(
+                          //     icon: Icons.calendar_view_week_outlined,
+                          //     label: 'تكرار الطبخ',
+                          //     value: family.cookingFrequency),
+                          // _ProfileRow(
+                          //     icon: Icons.delivery_dining_outlined,
+                          //     label: 'أيام الديليفري',
+                          //     value:
+                          // '${family.deliveryDaysPerWeek} أيام / أسبوع'),
                           if (family.favoriteDishes.isNotEmpty)
                             _ProfileRow(
                                 icon: Icons.favorite_outline_rounded,

@@ -3,6 +3,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../models/family_model.dart';
+import '../../../core/services/family_api_service.dart';
 
 abstract class FamilyEvent extends Equatable {
   @override
@@ -11,9 +12,11 @@ abstract class FamilyEvent extends Equatable {
 
 class FamilyInfoSubmitted extends FamilyEvent {
   final FamilyModel family;
-  FamilyInfoSubmitted(this.family);
+  final String token;
+  FamilyInfoSubmitted({required this.family, required this.token});
+
   @override
-  List<Object?> get props => [family];
+  List<Object?> get props => [family, token];
 }
 
 class FamilyInfoUpdated extends FamilyEvent {
@@ -29,7 +32,17 @@ abstract class FamilyState extends Equatable {
 }
 
 class FamilyInitial extends FamilyState {}
+
 class FamilyLoading extends FamilyState {}
+
+class FamilySuccess extends FamilyState {
+  final String message;
+
+  FamilySuccess([this.message = 'تم حفظ البيانات بنجاح']);
+
+  @override
+  List<Object?> get props => [message];
+}
 
 class FamilyLoaded extends FamilyState {
   final FamilyModel family;
@@ -51,13 +64,34 @@ class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
     on<FamilyInfoUpdated>(_onUpdate);
   }
 
-  Future<void> _onSubmit(FamilyInfoSubmitted event, Emitter<FamilyState> emit) async {
+  Future<void> _onSubmit(
+    FamilyInfoSubmitted event,
+    Emitter<FamilyState> emit,
+  ) async {
     emit(FamilyLoading());
-    await Future.delayed(Duration(milliseconds: 600));
-    emit(FamilyLoaded(event.family));
+
+    // أرسل البيانات للباك اند
+    final result = await FamilyApiService.saveFamilyInfo(
+      token: event.token,
+      memberCount: event.family.memberCount,
+      favoriteMeals: event.family.favoriteDishes,
+      dislikedMeals: event.family.dislikedDishes,
+      dislikedIngredients: event.family.dislikedIngredients,
+      allergicIngredients: event.family.allergies,
+      alwaysAvailableIngredients: event.family.availableBasicIngredients,
+    );
+
+    if (result.isSuccess) {
+      emit(FamilySuccess());
+    } else {
+      emit(FamilyFailure('حدث خطأ أثناء الأتصال حاول فيما بعد !'));
+    }
   }
 
-  Future<void> _onUpdate(FamilyInfoUpdated event, Emitter<FamilyState> emit) async {
+  Future<void> _onUpdate(
+    FamilyInfoUpdated event,
+    Emitter<FamilyState> emit,
+  ) async {
     emit(FamilyLoaded(event.family));
   }
 }
