@@ -1,69 +1,8 @@
-// import 'package:flutter_bloc/flutter_bloc.dart';
-// import 'package:sho_htghadona/features/auth/bloc/auth_repository.dart';
-// import 'auth_state.dart';
-
-// class AuthCubit extends Cubit<AuthState> {
-//   final AuthRepository authRepository;
-
-//   AuthCubit({required this.authRepository}) : super(AuthInitial());
-//   Future<void> checkAuth() async {
-//     emit(AuthUnauthenticated());
-//   }
-
-//   Future<void> register({
-//   required String name,
-//   required String email,
-//   required String password,
-// }) async {
-//   emit(AuthLoading());
-
-//   try {
-//     await authRepository.register(
-//       name: name,
-//       email: email,
-//       password: password,
-//     );
-
-//     emit(AuthRegisterSuccess());
-//   } catch (e) {
-//     emit(
-//       AuthFailure(
-//         e.toString().replaceFirst('Exception: ', ''),
-//       ),
-//     );
-//   }
-// }
-
-//   Future<void> login({
-//     required String email,
-//     required String password,
-//   }) async {
-//     emit(AuthLoading());
-//     try {
-//       final user = await authRepository.login(email: email, password: password);
-//       print('token: ${user.token}'); 
-//       emit(AuthSuccess(user));
-//     } catch (e) {
-//       emit(AuthFailure(e.toString().replaceFirst('Exception: ', '')));
-//     }
-//   }
-
-// Future<void> logout() async {
-//     final currentState = state;
-//     if (currentState is AuthSuccess) {
-//       try {
-//         await authRepository.logout(currentState.user.token);
-//       } catch (_) {
-//       }
-//     }
-//     emit(AuthLoggedOut());
-//   }
-// }
-
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_repository.dart';
+import 'package:sho_htghadona/features/auth/models/user_model.dart';
 import 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
@@ -90,28 +29,22 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   Future<void> register({
-  required String name,
-  required String email,
-  required String password,
-}) async {
-  emit(AuthLoading());
-
-  try {
-    await authRepository.register(
-      name: name,
-      email: email,
-      password: password,
-    );
-
-    emit(AuthRegisterSuccess());
-  } catch (e) {
-    emit(
-      AuthFailure(
-        e.toString().replaceFirst('Exception: ', ''),
-      ),
-    );
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    emit(AuthLoading());
+    try {
+      await authRepository.register(
+        name: name,
+        email: email,
+        password: password,
+      );
+      emit(AuthRegisterSuccess());
+    } catch (e) {
+      emit(AuthFailure(e.toString().replaceFirst('Exception: ', '')));
+    }
   }
-}
 
   Future<void> login({
     required String email,
@@ -120,7 +53,9 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     try {
       final user = await authRepository.login(email: email, password: password);
-      print('token: ${user.token}'); 
+       final prefs =await SharedPreferences.getInstance();
+      await prefs.setString('token', user.token);
+      await _saveUser(user);
       emit(AuthSuccess(user));
     } catch (e) {
       emit(AuthFailure(e.toString().replaceFirst('Exception: ', '')));
