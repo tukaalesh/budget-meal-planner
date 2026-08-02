@@ -13,7 +13,7 @@ class AppColors {
   static const Color accentLight = Color(0xFF4CAF78);
 
   static const Color background = Color(0xFFFAF7F2);
-  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surface = Color(0xFFFFFFFF); 
   static final Color surfaceVariant = const Color(0xFF2E7D52).withOpacity(0.05);
   static const Color cardBg = Color(0xFFFFFBF6);
 
@@ -185,15 +185,15 @@ class AppTheme {
         labelStyle:
             GoogleFonts.cairo(color: AppColors.textSecondary, fontSize: 14),
       ),
-      cardTheme: CardThemeData(
-        color: AppColors.cardBg,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.divider, width: 1),
-        ),
-        margin: EdgeInsets.zero,
-      ),
+      cardTheme: CardTheme(
+    color: AppColors.cardBg,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: AppColors.divider, width: 1),
+    ),
+    margin: EdgeInsets.zero,
+  ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariant,
         selectedColor: AppColors.primary.withOpacity(0.15),

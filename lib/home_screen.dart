@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../features/auth/bloc/auth_bloc.dart';
+import 'package:sho_htghadona/features/auth/bloc/auth_cubit.dart';
+import 'package:sho_htghadona/features/auth/bloc/auth_state.dart';
 import '../features/family/bloc/family_bloc.dart';
 import '../features/meal_request/screens/meal_request_screen.dart';
 import '../features/meal_history/bloc/meal_history_bloc.dart';
@@ -116,9 +117,9 @@ class _DashboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, authState) {
-        final user = authState is AuthAuthenticated ? authState.user : null;
+        final user = authState is AuthSuccess ? authState.user : null;
         final firstName = (user?.name ?? 'صديقنا').split(' ').first;
 
         return BlocBuilder<MealHistoryBloc, MealHistoryState>(
@@ -598,11 +599,76 @@ class _NoMealsYetCard extends StatelessWidget {
 class _ProfileTab extends StatelessWidget {
   const _ProfileTab();
 
+  void _showLogoutConfirmDialog(BuildContext context) {
+    final authCubit = context.read<AuthCubit>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: Text(
+              'تسجيل الخروج',
+              style: GoogleFonts.cairo(
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            content: Text(
+              'هل أنت متأكد أنك تريد تسجيل الخروج؟',
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            actionsPadding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                ),
+                child: Text(
+                  'إلغاء',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  authCubit.logout();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'تسجيل الخروج',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, authState) {
-        final user = authState is AuthAuthenticated ? authState.user : null;
+        final user = authState is AuthSuccess ? authState.user : null;
 
         return BlocBuilder<FamilyBloc, FamilyState>(
           builder: (context, familyState) {
@@ -676,7 +742,8 @@ class _ProfileTab extends StatelessWidget {
                                   color: AppColors.error)),
                           contentPadding: EdgeInsets.symmetric(horizontal: 4),
                           onTap: () {
-                            context.read<AuthBloc>().add(AuthLogoutRequested());
+                           // print(' تم الضغط على تسجيل الخروج');
+                            _showLogoutConfirmDialog(context);
                           },
                         ),
                       ]),

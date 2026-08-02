@@ -1,9 +1,9 @@
 // ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../bloc/auth_bloc.dart';
+import 'package:sho_htghadona/features/auth/bloc/auth_cubit.dart';
+import 'package:sho_htghadona/features/auth/bloc/auth_state.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_widgets.dart';
 import 'register_screen.dart';
@@ -21,6 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passCtrl = TextEditingController();
   bool _obscure = true;
 
+  static final _emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$');
+
   @override
   void dispose() {
     _emailCtrl.dispose();
@@ -28,12 +30,26 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  String? _validateEmail(String? v) {
+    final value = v?.trim() ?? '';
+    if (value.isEmpty) return 'أدخل بريدك الإلكتروني';
+    if (!_emailRegex.hasMatch(value)) return 'صيغة البريد الإلكتروني غير صحيحة';
+    return null;
+  }
+
+  String? _validatePassword(String? v) {
+    final value = v ?? '';
+    if (value.isEmpty) return 'أدخل كلمة المرور';
+    if (value.length < 6) return 'كلمة المرور قصيرة جداً';
+    return null;
+  }
+
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
-      context.read<AuthBloc>().add(AuthLoginRequested(
+      context.read<AuthCubit>().login(
             email: _emailCtrl.text.trim(),
             password: _passCtrl.text,
-          ));
+          );
     }
   }
 
@@ -43,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: BlocConsumer<AuthBloc, AuthState>(
+        body: BlocConsumer<AuthCubit, AuthState>(
           listener: (context, state) {
             if (state is AuthFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -53,8 +69,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               );
             }
+            // ملاحظة: ما منعمل navigation هون لصفحة الهوم
+            // لأنه app.dart عندها BlocListener عام بيتابع AuthSuccess
+            // ويوجه المستخدم تلقائياً (لصفحة /family أو /home حسب حالته)
+            // فمنع النقل المزدوج، منخلي التوجيه الفعلي بمكان واحد بس.
           },
           builder: (context, state) {
+            final isLoading = state is AuthLoading;
+
             return Stack(
               children: [
                 Positioned(
@@ -86,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Form(
                       key: _formKey,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -161,9 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             keyboardType: TextInputType.emailAddress,
                             prefixIcon: const Icon(Icons.email_outlined,
                                 color: AppColors.textHint),
-                            validator: (v) => v == null || v.isEmpty
-                                ? 'أدخل بريدك الإلكتروني'
-                                : null,
+                            validator: _validateEmail,
                           ),
                           const SizedBox(height: 16),
                           AppTextField(
@@ -183,31 +204,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: () =>
                                   setState(() => _obscure = !_obscure),
                             ),
-                            validator: (v) => v == null || v.length < 6
-                                ? 'كلمة المرور قصيرة جداً'
-                                : null,
+                            validator: _validatePassword,
                           ),
-                          const SizedBox(height: 8),
-                          // Align(
-                          //   alignment: Alignment.centerLeft,
-                          //   child: TextButton(
-                          //     // onPressed: () {},
-                          //     // child: Text(
-                          //     //   'نسيت كلمة المرور؟',
-                          //     //   style: GoogleFonts.cairo(
-                          //     //     color: AppColors..,
-                          //     //     fontWeight: FontWeight.w600,
-                          //     //   ),
-                          //     // ),
-                          //   ),
-                          // ),
                           const SizedBox(height: 24),
                           SizedBox(
                             width: double.infinity,
                             child: AppButton(
                               label: 'تسجيل الدخول',
-                              onPressed: _submit,
-                              isLoading: state is AuthLoading,
+                              onPressed: isLoading ? null : _submit,
+                              isLoading: isLoading,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -220,10 +225,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: AppColors.textSecondary),
                               ),
                               GestureDetector(
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const RegisterScreen()),
-                                ),
+                                onTap: isLoading
+                                    ? null
+                                    : () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const RegisterScreen()),
+                                        ),
                                 child: Text(
                                   'إنشاء حساب',
                                   style: GoogleFonts.cairo(

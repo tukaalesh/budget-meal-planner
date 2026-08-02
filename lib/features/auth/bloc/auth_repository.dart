@@ -1,0 +1,97 @@
+import 'dart:convert';
+import '../models/user_model.dart';
+import 'package:http/http.dart' as http;
+
+class AuthRepository {
+  final String baseUrl = 'http://127.0.0.1:8000/api';
+
+  Future<UserModel> register({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    final uri = Uri.parse('$baseUrl/register');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    print('REGISTER STATUS: ${response.statusCode}');
+    print('REGISTER BODY: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return UserModel.fromJson(data);
+    }
+
+    throw Exception(_extractError(response.body));
+  }
+
+  String _extractError(String body) {
+    try {
+      final data = jsonDecode(body);
+
+      if (data['message'] != null) {
+        return data['message'].toString();
+      }
+
+      if (data['errors'] != null) {
+        final errors = data['errors'] as Map<String, dynamic>;
+
+        final firstError = errors.values.first;
+
+        if (firstError is List && firstError.isNotEmpty) {
+          return firstError.first.toString();
+        }
+      }
+
+      return 'حدث خطأ غير متوقع';
+    } catch (_) {
+      return 'حدث خطأ غير متوقع';
+    }
+  }
+
+  Future<UserModel> login({
+    required String email,
+    required String password,
+  }) async {
+    final uri = Uri.parse('$baseUrl/login');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return UserModel.fromJson(data);
+    }
+
+    throw Exception(_extractError(response.body));
+  }
+
+  Future<void> logout(String token) async {
+    final uri = Uri.parse('$baseUrl/logout');
+    await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+  }
+}

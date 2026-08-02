@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../bloc/auth_bloc.dart';
+import 'package:sho_htghadona/features/auth/bloc/auth_cubit.dart';
+import 'package:sho_htghadona/features/auth/bloc/auth_state.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_widgets.dart';
 
@@ -21,6 +22,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passCtrl = TextEditingController();
   bool _obscure = true;
 
+  static final _emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$');
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -29,13 +32,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  String? _validateName(String? v) {
+    final value = v?.trim() ?? '';
+    if (value.isEmpty) return 'أدخل اسمك';
+    if (value.length < 3) return 'الاسم قصير جداً';
+    return null;
+  }
+
+  String? _validateEmail(String? v) {
+    final value = v?.trim() ?? '';
+    if (value.isEmpty) return 'أدخل بريدك الإلكتروني';
+    if (!_emailRegex.hasMatch(value)) return 'صيغة البريد الإلكتروني غير صحيحة';
+    return null;
+  }
+
+  String? _validatePassword(String? v) {
+    final value = v ?? '';
+    if (value.isEmpty) return 'أدخل كلمة المرور';
+    if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+    return null;
+  }
+
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
-      context.read<AuthBloc>().add(AuthRegisterRequested(
+      context.read<AuthCubit>().register(
             name: _nameCtrl.text.trim(),
             email: _emailCtrl.text.trim(),
             password: _passCtrl.text,
-          ));
+          );
     }
   }
 
@@ -50,22 +74,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
-        body: BlocConsumer<AuthBloc, AuthState>(
+        body: BlocConsumer<AuthCubit, AuthState>(
           listener: (context, state) {
             if (state is AuthFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(state.message, style: GoogleFonts.cairo()),
+                  content: Text(state.message), 
                   backgroundColor: AppColors.error,
                 ),
               );
             }
+            if (state is AuthRegisterSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'تم إنشاء الحساب بنجاح، سجل الدخول الآن',
+                    style: GoogleFonts.cairo(),
+                  ),
+                  backgroundColor: AppColors.accent,
+                ),
+              );
+              // بيرجع لصفحة تسجيل الدخول (RegisterScreen انفتحت أصلاً
+              // عن طريق Navigator.push من فوق LoginScreen)
+              Navigator.of(context).pop();
+            }
           },
           builder: (context, state) {
+            final isLoading = state is AuthLoading;
+
             return SingleChildScrollView(
               padding: EdgeInsets.all(24),
               child: Form(
                 key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -86,8 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _nameCtrl,
                       prefixIcon: Icon(Icons.person_outline_rounded,
                           color: AppColors.textHint),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'أدخل اسمك' : null,
+                      validator: _validateName,
                     ),
                     SizedBox(height: 16),
                     AppTextField(
@@ -97,9 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       prefixIcon:
                           Icon(Icons.email_outlined, color: AppColors.textHint),
-                      validator: (v) => v == null || v.isEmpty
-                          ? 'أدخل بريدك الإلكتروني'
-                          : null,
+                      validator: _validateEmail,
                     ),
                     SizedBox(height: 16),
                     AppTextField(
@@ -118,17 +156,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
-                      validator: (v) => v == null || v.length < 6
-                          ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
-                          : null,
+                      validator: _validatePassword,
                     ),
                     SizedBox(height: 32),
                     SizedBox(
                       width: double.infinity,
                       child: AppButton(
                         label: 'إنشاء الحساب',
-                        onPressed: _submit,
-                        isLoading: state is AuthLoading,
+                        onPressed: isLoading ? null : _submit,
+                        isLoading: isLoading,
                       ),
                     ),
                     SizedBox(height: 16),
@@ -139,7 +175,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: GoogleFonts.cairo(
                                 color: AppColors.textSecondary)),
                         GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
+                          onTap: isLoading
+                              ? null
+                              : () => Navigator.of(context).pop(),
                           child: Text(
                             'تسجيل الدخول',
                             style: GoogleFonts.cairo(
