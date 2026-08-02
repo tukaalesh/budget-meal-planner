@@ -39,7 +39,7 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
           token: "4|59Lnb0kybgG3smdNG7KUObcvdVOueHlMiLSUwtxr07ba8964",
           family: FamilyModel(
             memberCount: _memberCount,
-            favoriteDishes: _favoriteDishes.toList(),
+            favoriteDishes: _favoriteDishes.toList(), 
             dislikedDishes: _dislikedDishes.toList(),
             dislikedIngredients: _dislikedIngredients.toList(),
             allergies: _allergies.toList(),
