@@ -103,14 +103,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/family_model.dart';
 import '../../../core/services/family_api_service.dart';
 
-// ── Events ──────────────────────────────────────────────
-
 abstract class FamilyEvent extends Equatable {
   @override
   List<Object?> get props => [];
 }
-
-/// إنشاء أول استبيان (POST) — بعد اللوغ ان لأول مرة
 class FamilyInfoSubmitted extends FamilyEvent {
   final FamilyModel family;
   final String token;
@@ -119,8 +115,6 @@ class FamilyInfoSubmitted extends FamilyEvent {
   @override
   List<Object?> get props => [family, token];
 }
-
-/// تعديل الاستبيان الموجود (PUT) — من صفحة البروفايل
 class FamilyInfoEdited extends FamilyEvent {
   final FamilyModel family;
   final String token;
@@ -129,20 +123,13 @@ class FamilyInfoEdited extends FamilyEvent {
   @override
   List<Object?> get props => [family, token];
 }
-
-/// جلب بيانات العائلة المحفوظة (GET)
 class FamilyProfileRequested extends FamilyEvent {}
-
-/// تحديث الحالة يدويًا بدون نداء API (نادرًا ما تحتاجه، تركناه كما كان)
 class FamilyInfoUpdated extends FamilyEvent {
   final FamilyModel family;
   FamilyInfoUpdated(this.family);
   @override
   List<Object?> get props => [family];
 }
-
-// ── States ──────────────────────────────────────────────
-
 abstract class FamilyState extends Equatable {
   @override
   List<Object?> get props => [];
@@ -173,9 +160,6 @@ class FamilyFailure extends FamilyState {
   @override
   List<Object?> get props => [message];
 }
-
-// ── Bloc ────────────────────────────────────────────────
-
 class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
   FamilyBloc() : super(FamilyInitial()) {
     on<FamilyInfoSubmitted>(_onSubmit);

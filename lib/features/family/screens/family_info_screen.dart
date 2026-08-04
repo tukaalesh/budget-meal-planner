@@ -960,11 +960,9 @@ import '../../../core/services/search_api_service.dart';
 enum _SearchType { meals, ingredients, allergies }
 
 class FamilyInfoScreen extends StatefulWidget {
-  /// إذا انبعت initialFamily => وضع تعديل (PUT) وبتتعبى القيم مسبقًا
-  /// إذا null => وضع إنشاء أول مرة (POST)
-  final FamilyModel? initialFamily; // << جديد
+  final FamilyModel? initialFamily; 
 
-  const FamilyInfoScreen({super.key, this.initialFamily}); // << جديد
+  const FamilyInfoScreen({super.key, this.initialFamily}); 
 
   @override
   State<FamilyInfoScreen> createState() => _FamilyInfoScreenState();

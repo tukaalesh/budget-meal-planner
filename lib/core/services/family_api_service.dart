@@ -87,7 +87,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import '../../features/family/models/family_model.dart'; // عدّل المسار حسب مكان الموديل عندك
+import '../../features/family/models/family_model.dart';
 
 const _kBaseUrl = 'http://127.0.0.1:8000/api';
 
@@ -103,17 +103,6 @@ class ApiResult<T> {
 
 class FamilyApiService {
   static final _client = http.Client();
-
-  /// POST /family/setup
-  /// Body:
-  /// {
-  ///   "family_members": 4,
-  ///   "always_available_ingredients": ["رز", "دجاج"],
-  ///   "allergic_ingredients": [],
-  ///   "disliked_ingredients": ["ثوم"],
-  ///   "favorite_meals": ["شاكرية"],
-  ///   "disliked_meals": []
-  /// }
   static Future<ApiResult<bool>> saveFamilyInfo({
     required String token,
     required int memberCount,
@@ -166,17 +155,6 @@ class FamilyApiService {
       return ApiResult.failure('خطأ في الاتصال بالخادم');
     }
   }
-
-  /// GET /family/profile
-  /// Response:
-  /// {
-  ///   "family_size": 4,
-  ///   "always_available_ingredients": [],
-  ///   "allergic_ingredients": [],
-  ///   "disliked_ingredients": [],
-  ///   "favorite_meals": [],
-  ///   "disliked_meals": []
-  /// }
   static Future<ApiResult<FamilyModel>> fetchFamilyProfile({
     required String token,
   }) async {
