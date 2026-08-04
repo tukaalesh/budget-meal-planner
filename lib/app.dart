@@ -50,16 +50,13 @@ class _AppState extends State<App> {
         builder: (context, child) {
           return BlocListener<AuthCubit, AuthState>(
             listener: (context, state) async {
-              if (state is AuthSuccess && !isNavigating) {
-                isNavigating = true;
+              if (state is AuthSuccess) {
                 final prefs = await SharedPreferences.getInstance();
+
                 final key = 'family_completed_${state.user.id}';
 
-                // print("KEY = $key");
-                // print("VALUE = ${prefs.getBool(key)}");
-                // print("ALL = ${prefs.getKeys()}");
-
                 final completed = prefs.getBool(key) ?? false;
+
                 if (completed) {
                   navigatorKey.currentState?.pushNamedAndRemoveUntil(
                     '/home',
@@ -71,6 +68,12 @@ class _AppState extends State<App> {
                     (_) => false,
                   );
                 }
+              } else if (state is AuthUnauthenticated ||
+                  state is AuthLoggedOut) {
+                navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  '/',
+                  (_) => false,
+                );
               }
             },
             child: Directionality(
