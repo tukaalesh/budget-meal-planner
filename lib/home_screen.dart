@@ -595,7 +595,7 @@ class _NoMealsYetCard extends StatelessWidget {
   }
 }
 
-// ── Profile Tab 
+// ── Profile Tab
 
 class _ProfileTab extends StatelessWidget {
   const _ProfileTab();
@@ -655,7 +655,8 @@ class _ProfileTab extends StatelessWidget {
                 ),
                 child: Text(
                   'تسجيل الخروج',
-                  style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+                  style: GoogleFonts.cairo(
+                      fontSize: 14, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -723,24 +724,25 @@ class _ProfileTab extends StatelessWidget {
                       ],
                       _ProfileSection(title: 'الحساب', children: [
                         ListTile(
-    leading: Icon(Icons.family_restroom_rounded,
-        color: AppColors.accent),
-    title: Text('تعديل معلومات العائلة',
-        style: GoogleFonts.cairo(
-            fontSize: 14, fontWeight: FontWeight.w500)),
-    trailing: Icon(Icons.arrow_back_ios_rounded,
-        size: 14, color: AppColors.textHint),
-    contentPadding: EdgeInsets.symmetric(horizontal: 4),
-    onTap: () {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => BlocProvider.value(
-            value: context.read<FamilyBloc>(),
-            child: FamilyInfoScreen(initialFamily: family),
-          ),
-        ),
-      );
-    }),
+                            leading: Icon(Icons.family_restroom_rounded,
+                                color: AppColors.accent),
+                            title: Text('تعديل معلومات العائلة',
+                                style: GoogleFonts.cairo(
+                                    fontSize: 14, fontWeight: FontWeight.w500)),
+                            trailing: Icon(Icons.arrow_back_ios_rounded,
+                                size: 14, color: AppColors.textHint),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 4),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<FamilyBloc>(),
+                                    child:
+                                        FamilyInfoScreen(initialFamily: family),
+                                  ),
+                                ),
+                              );
+                            }),
                         Divider(color: AppColors.divider, height: 1),
                         ListTile(
                           leading: Icon(Icons.logout_rounded,
@@ -752,7 +754,7 @@ class _ProfileTab extends StatelessWidget {
                                   color: AppColors.error)),
                           contentPadding: EdgeInsets.symmetric(horizontal: 4),
                           onTap: () {
-                           // print(' تم الضغط على تسجيل الخروج');
+                            // print(' تم الضغط على تسجيل الخروج');
                             _showLogoutConfirmDialog(context);
                           },
                         ),

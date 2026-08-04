@@ -107,6 +107,7 @@ abstract class FamilyEvent extends Equatable {
   @override
   List<Object?> get props => [];
 }
+
 class FamilyInfoSubmitted extends FamilyEvent {
   final FamilyModel family;
   final String token;
@@ -115,6 +116,7 @@ class FamilyInfoSubmitted extends FamilyEvent {
   @override
   List<Object?> get props => [family, token];
 }
+
 class FamilyInfoEdited extends FamilyEvent {
   final FamilyModel family;
   final String token;
@@ -123,13 +125,16 @@ class FamilyInfoEdited extends FamilyEvent {
   @override
   List<Object?> get props => [family, token];
 }
+
 class FamilyProfileRequested extends FamilyEvent {}
+
 class FamilyInfoUpdated extends FamilyEvent {
   final FamilyModel family;
   FamilyInfoUpdated(this.family);
   @override
   List<Object?> get props => [family];
 }
+
 abstract class FamilyState extends Equatable {
   @override
   List<Object?> get props => [];
@@ -160,6 +165,7 @@ class FamilyFailure extends FamilyState {
   @override
   List<Object?> get props => [message];
 }
+
 class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
   FamilyBloc() : super(FamilyInitial()) {
     on<FamilyInfoSubmitted>(_onSubmit);
@@ -185,6 +191,18 @@ class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
     );
 
     if (result.isSuccess) {
+      final prefs = await SharedPreferences.getInstance();
+
+      final userId = prefs.getString('user_id');
+
+      print("USER ID = $userId");
+
+      await prefs.setBool('family_completed_$userId', true);
+
+      print(
+        prefs.getBool('family_completed_$userId'),
+      );
+
       emit(FamilySuccess());
       emit(FamilyLoaded(event.family));
     } else {

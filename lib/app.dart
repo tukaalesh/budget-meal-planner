@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_cubit.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_repository.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_state.dart';
@@ -11,9 +12,15 @@ import 'features/meal_history/bloc/meal_history_bloc.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-class App extends StatelessWidget {
+class App extends StatefulWidget {
   const App({super.key});
 
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> {
+  bool isNavigating = false;
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -42,27 +49,28 @@ class App extends StatelessWidget {
         initialRoute: '/',
         builder: (context, child) {
           return BlocListener<AuthCubit, AuthState>(
-            listener: (context, state) {
-              if (state is AuthSuccess) {
-                final familyState = context.read<FamilyBloc>().state;
+            listener: (context, state) async {
+              if (state is AuthSuccess && !isNavigating) {
+                isNavigating = true;
+                final prefs = await SharedPreferences.getInstance();
+                final key = 'family_completed_${state.user.id}';
 
-                if (familyState is FamilyInitial) {
+                // print("KEY = $key");
+                // print("VALUE = ${prefs.getBool(key)}");
+                // print("ALL = ${prefs.getKeys()}");
+
+                final completed = prefs.getBool(key) ?? false;
+                if (completed) {
                   navigatorKey.currentState?.pushNamedAndRemoveUntil(
                     '/home',
                     (_) => false,
                   );
                 } else {
                   navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                    '/home',
+                    '/family',
                     (_) => false,
                   );
                 }
-              } else if (state is AuthUnauthenticated ||
-                  state is AuthLoggedOut) {
-                navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                  '/',
-                  (_) => false,
-                );
               }
             },
             child: Directionality(

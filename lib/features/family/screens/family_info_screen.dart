@@ -63,7 +63,7 @@
 //           token: token,
 //           family: FamilyModel(
 //             memberCount: _memberCount,
-//             favoriteDishes: _favoriteDishes.toList(),
+//             favoriteDishes: _favoriteDishes.toList(), 
 //             dislikedDishes: _dislikedDishes.toList(),
 //             dislikedIngredients: _dislikedIngredients.toList(),
 //             allergies: _allergies.toList(),
@@ -123,7 +123,7 @@
 //     ),
 //   ],
 // ),
-
+        
 //         body: BlocConsumer<FamilyBloc, FamilyState>(
 //           listener: (context, state) {
 //             if (state is FamilySuccess) {
@@ -960,9 +960,9 @@ import '../../../core/services/search_api_service.dart';
 enum _SearchType { meals, ingredients, allergies }
 
 class FamilyInfoScreen extends StatefulWidget {
-  final FamilyModel? initialFamily;
+  final FamilyModel? initialFamily; 
 
-  const FamilyInfoScreen({super.key, this.initialFamily});
+  const FamilyInfoScreen({super.key, this.initialFamily}); 
 
   @override
   State<FamilyInfoScreen> createState() => _FamilyInfoScreenState();
@@ -1056,15 +1056,7 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-          title: Text(
-            _isEditMode ? 'تعديل معلومات العائلة' : 'معلومات العائلة',
-          ),
+          title: Text(_isEditMode ? 'تعديل معلومات العائلة' : 'معلومات العائلة'), // << عدّل
           centerTitle: false,
           backgroundColor: AppColors.background,
           elevation: 0,
@@ -1085,7 +1077,7 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
             }
 
             if (state is FamilySuccess) {
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); 
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1284,9 +1276,7 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: AppButton(
-                      label: _isEditMode
-                          ? 'حفظ التعديلات'
-                          : 'حفظ و متابعة', // << عدّل
+                      label: _isEditMode ? 'حفظ التعديلات' : 'حفظ و متابعة', // << عدّل
                       onPressed: _submit,
                     ),
                   ),

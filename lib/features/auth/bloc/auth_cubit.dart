@@ -19,6 +19,7 @@ class AuthCubit extends Cubit<AuthState> {
 
       if (userJson != null) {
         final user = UserModel.fromJson(jsonDecode(userJson));
+        //print("CHECK AUTH ID = ${user.id}");
         emit(AuthSuccess(user));
       } else {
         emit(AuthUnauthenticated());
@@ -53,8 +54,12 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     try {
       final user = await authRepository.login(email: email, password: password);
+      // print("LOGIN ID = ${user.id}");
       final prefs = await SharedPreferences.getInstance();
+      //ضفت هاد السطؤ
+      await prefs.setString('user_id', user.id);
       await prefs.setString('token', user.token);
+
       await _saveUser(user);
       emit(AuthSuccess(user));
     } catch (e) {
