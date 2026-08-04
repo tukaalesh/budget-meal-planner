@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_cubit.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_state.dart';
+import 'package:sho_htghadona/features/family/screens/family_info_screen.dart';
 import '../features/family/bloc/family_bloc.dart';
 import '../features/meal_request/screens/meal_request_screen.dart';
 import '../features/meal_history/bloc/meal_history_bloc.dart';
@@ -722,15 +723,24 @@ class _ProfileTab extends StatelessWidget {
                       ],
                       _ProfileSection(title: 'الحساب', children: [
                         ListTile(
-                            leading: Icon(Icons.family_restroom_rounded,
-                                color: AppColors.accent),
-                            title: Text('تعديل معلومات العائلة',
-                                style: GoogleFonts.cairo(
-                                    fontSize: 14, fontWeight: FontWeight.w500)),
-                            trailing: Icon(Icons.arrow_back_ios_rounded,
-                                size: 14, color: AppColors.textHint),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 4),
-                            onTap: () {}),
+    leading: Icon(Icons.family_restroom_rounded,
+        color: AppColors.accent),
+    title: Text('تعديل معلومات العائلة',
+        style: GoogleFonts.cairo(
+            fontSize: 14, fontWeight: FontWeight.w500)),
+    trailing: Icon(Icons.arrow_back_ios_rounded,
+        size: 14, color: AppColors.textHint),
+    contentPadding: EdgeInsets.symmetric(horizontal: 4),
+    onTap: () {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: context.read<FamilyBloc>(),
+            child: FamilyInfoScreen(initialFamily: family),
+          ),
+        ),
+      );
+    }),
                         Divider(color: AppColors.divider, height: 1),
                         ListTile(
                           leading: Icon(Icons.logout_rounded,
