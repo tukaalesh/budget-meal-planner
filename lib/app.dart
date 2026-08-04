@@ -48,7 +48,7 @@ class App extends StatelessWidget {
 
                 if (familyState is FamilyInitial) {
                   navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                    '/family',
+                    '/home',
                     (_) => false,
                   );
                 } else {
