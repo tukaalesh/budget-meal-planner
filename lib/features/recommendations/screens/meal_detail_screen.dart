@@ -10,8 +10,9 @@ import '../models/meal_model.dart';
 /// متزامنة مع باقي الشاشة دون الحاجة لتمرير قيمة ثابتة.
 class MealDetailScreen extends StatelessWidget {
   final PlanMeal meal;
+  final String dayLabel;
 
-  const MealDetailScreen({super.key, required this.meal});
+  const MealDetailScreen({super.key, required this.meal, required this.dayLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +45,11 @@ class MealDetailScreen extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
+              _DetailChip(
+                icon: Icons.calendar_today,
+                label: 'الموعد',
+                value: dayLabel,
+              ),
               _DetailChip(
                 icon: Icons.schedule,
                 label: 'وقت التحضير',

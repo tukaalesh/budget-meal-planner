@@ -144,6 +144,12 @@ class RecommendationsBloc
             ))
         .toList();
 
+    // وقائمة استبعاد لكل وجبة لم يُعجب بها المستخدم (الباقي من نفس الخطة).
+    final excludedMealIds = state.plan.meals
+        .where((m) => !state.likedMealIds.contains(m.mealId))
+        .map((m) => m.mealId)
+        .toList();
+
     final requestForRegeneration = MealRequestModel(
       budget: state.requestModel.budget,
       servings: state.requestModel.servings,
@@ -152,6 +158,7 @@ class RecommendationsBloc
       prepTime: state.requestModel.prepTime,
       availableIngredients: state.requestModel.availableIngredients,
       requiredMeals: likedMeals,
+      excludedMeals: excludedMealIds,
     );
 
     final result = await PlansApiService.generatePlan(

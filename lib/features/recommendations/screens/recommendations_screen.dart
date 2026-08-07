@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/bloc/auth_cubit.dart';
 import '../../auth/bloc/auth_state.dart';
+import '../../meal_history/bloc/meal_history_bloc.dart' hide AsyncStatus;
 import '../../meal_request/models/meal_request_model.dart';
 import '../bloc/recommendations_bloc.dart';
 import '../models/meal_model.dart';
@@ -93,7 +94,17 @@ class _RecommendationsViewState extends State<_RecommendationsView> {
 
           if (state.acceptStatus == AsyncStatus.success &&
               state.acceptResponse != null) {
-            Navigator.of(context).pushReplacement(
+            // نحدّث سجل الخطط فورًا حتى تظهر الخطة الجديدة في الهيستوري
+            // مباشرة دون الحاجة لعمل Refresh يدوي.
+            context.read<MealHistoryBloc>().add(const HistoryRequested());
+
+            // ننتقل عبر اسم الـ Route المسجّل '/home' في AppRouter ونمسح
+            // كل الشاشات السابقة (بغض النظر عن عمقها)، ثم نعرض قائمة
+            // التسوق فوقها. هذا يضمن أن الرجوع للخلف من قائمة التسوق
+            // يوصل دائمًا إلى الرئيسية الحقيقية المسجّلة بنظام التنقل.
+            final navigator = Navigator.of(context);
+            navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+            navigator.push(
               MaterialPageRoute(
                 builder: (_) =>
                     ShoppingListScreen(response: state.acceptResponse!),
@@ -116,21 +127,27 @@ class _RecommendationsViewState extends State<_RecommendationsView> {
                 Text('الوجبات المقترحة',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
-                for (final meal in state.plan.meals)
+                for (int i = 0; i < state.plan.meals.length; i++) ...[
                   MealCard(
-                    meal: meal,
-                    isLiked: state.isLiked(meal.mealId),
-                    onLikeToggle: () =>
-                        bloc.add(MealLikeToggled(meal.mealId)),
+                    meal: state.plan.meals[i],
+                    isLiked: state.isLiked(state.plan.meals[i].mealId),
+                    dayLabel: mealDayLabel(i, state.requestModel.daysPerMeal),
+                    onLikeToggle: () => bloc
+                        .add(MealLikeToggled(state.plan.meals[i].mealId)),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => BlocProvider.value(
                           value: bloc,
-                          child: MealDetailScreen(meal: meal),
+                          child: MealDetailScreen(
+                            meal: state.plan.meals[i],
+                            dayLabel:
+                                mealDayLabel(i, state.requestModel.daysPerMeal),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                ],
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed:

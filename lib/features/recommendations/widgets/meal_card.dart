@@ -3,17 +3,32 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/meal_model.dart';
 
+/// يحسب تسمية اليوم/الأيام لوجبة حسب ترتيبها ومدة بقائها (days_per_meal).
+/// مثال: daysPerMeal=1 → الوجبة الأولى "اليوم 1"، الثانية "اليوم 2"...
+/// daysPerMeal=2 → الوجبة الأولى "اليوم 1 - اليوم 2"، الثانية "اليوم 3 - اليوم 4"...
+String mealDayLabel(int index, int daysPerMeal) {
+  final span = daysPerMeal < 1 ? 1 : daysPerMeal;
+  final startDay = index * span + 1;
+  if (span == 1) {
+    return 'اليوم $startDay';
+  }
+  final endDay = startDay + span - 1;
+  return 'اليوم $startDay - اليوم $endDay';
+}
+
 class MealCard extends StatelessWidget {
   final PlanMeal meal;
   final bool isLiked;
   final VoidCallback onLikeToggle;
   final VoidCallback? onTap;
+  final String dayLabel;
 
   const MealCard({
     super.key,
     required this.meal,
     required this.isLiked,
     required this.onLikeToggle,
+    required this.dayLabel,
     this.onTap,
   });
 
@@ -51,6 +66,7 @@ class MealCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                _InfoChip(icon: Icons.calendar_today, label: dayLabel),
                 _InfoChip(icon: Icons.schedule, label: meal.prepTime),
                 _InfoChip(icon: Icons.bar_chart, label: meal.difficulty),
                 _InfoChip(icon: Icons.eco_outlined, label: meal.seasonality),

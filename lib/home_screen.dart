@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element, unused_local_variable, prefer_const_constructors, deprecated_member_use, prefer_const_literals_to_create_immutables
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,12 +24,32 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    _DashboardTab(),
-    MealRequestScreen(),
-    MealHistoryScreen(),
-    _ProfileTab(),
-  ];
+  // مفتاح يتغيّر كل مرة نفتح فيها تبويب "الخطة" قادمين من تبويب آخر،
+  // حتى يبني فلاتر MealRequestScreen من جديد (فورم فاضي كل مرة) بدل
+  // الاحتفاظ بنفس الحالة القديمة بسبب IndexedStack.
+  int _mealRequestResetKey = 0;
+
+  List<Widget> get _pages => [
+        const _DashboardTab(),
+        MealRequestScreen(key: ValueKey(_mealRequestResetKey)),
+        const MealHistoryScreen(),
+        const _ProfileTab(),
+      ];
+
+  void _onTabSelected(int index) {
+    setState(() {
+      if (index == 1 && _currentIndex != 1) {
+        _mealRequestResetKey++;
+      }
+      _currentIndex = index;
+    });
+  }
+
+  /// نفس منطق تبديل التبويب أعلاه، مكشوف للاستخدام من الأزرار الداخلية
+  /// (مثل زر "ابدأ الآن" وبطاقة "لا توجد وجبات محفوظة") حتى لا تفوّت
+  /// إعادة تعيين فورم طلب الخطة عند الانتقال إليه من مكان غير الشريط
+  /// السفلي مباشرة.
+  void switchToTab(int index) => _onTabSelected(index);
 
   @override
   void initState() {
@@ -60,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: SafeArea(
             child: NavigationBar(
               selectedIndex: _currentIndex,
-              onDestinationSelected: (i) => setState(() => _currentIndex = i),
+              onDestinationSelected: _onTabSelected,
               backgroundColor: Colors.transparent,
               elevation: 0,
               height: 64,
@@ -126,12 +148,15 @@ class _DashboardTab extends StatelessWidget {
             final recentPlans = histState.listStatus == AsyncStatus.success
                 ? histState.plans.take(3).toList()
                 : <PlanSummary>[];
+            // مجموع عدد الوجبات عبر كل الخطط المحفوظة (بديل "عدد الوجبات
+            // المحفوظة" بما أن الـ API يرجع خططًا لا وجبات مفردة).
             final mealsCount = histState.plans
                 .fold<int>(0, (sum, p) => sum + p.numberOfMeals);
 
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
+                // ── Header ───────────────────────────────────────
 
                 SliverPadding(
                   padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -142,8 +167,7 @@ class _DashboardTab extends StatelessWidget {
                         onTap: () {
                           final homeState = context
                               .findAncestorStateOfType<_HomeScreenState>();
-                          homeState
-                              ?.setState(() => homeState._currentIndex = 1);
+                          homeState?.switchToTab(1);
                         },
                       ),
                       SizedBox(height: 28),
@@ -205,8 +229,7 @@ class _DashboardTab extends StatelessWidget {
                             onPressed: () {
                               final homeState = context
                                   .findAncestorStateOfType<_HomeScreenState>();
-                              homeState
-                                  ?.setState(() => homeState._currentIndex = 2);
+                              homeState?.switchToTab(2);
                             },
                             child: Text(
                               'عرض الكل',
@@ -228,8 +251,7 @@ class _DashboardTab extends StatelessWidget {
                           onTap: () {
                             final homeState = context
                                 .findAncestorStateOfType<_HomeScreenState>();
-                            homeState
-                                ?.setState(() => homeState._currentIndex = 1);
+                            homeState?.switchToTab(1);
                           },
                         ),
 
