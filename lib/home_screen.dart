@@ -1,5 +1,3 @@
-// ignore_for_file: unused_element, unused_local_variable, prefer_const_constructors, deprecated_member_use, prefer_const_literals_to_create_immutables
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -128,15 +126,12 @@ class _DashboardTab extends StatelessWidget {
             final recentPlans = histState.listStatus == AsyncStatus.success
                 ? histState.plans.take(3).toList()
                 : <PlanSummary>[];
-            // مجموع عدد الوجبات عبر كل الخطط المحفوظة (بديل "عدد الوجبات
-            // المحفوظة" بما أن الـ API يرجع خططًا لا وجبات مفردة).
             final mealsCount = histState.plans
                 .fold<int>(0, (sum, p) => sum + p.numberOfMeals);
 
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // ── Header ───────────────────────────────────────
 
                 SliverPadding(
                   padding: EdgeInsets.fromLTRB(20, 20, 20, 0),

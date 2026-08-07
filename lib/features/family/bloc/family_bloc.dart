@@ -127,6 +127,7 @@ class FamilyInfoEdited extends FamilyEvent {
 }
 
 class FamilyProfileRequested extends FamilyEvent {}
+class FamilyReset extends FamilyEvent {}
 
 class FamilyInfoUpdated extends FamilyEvent {
   final FamilyModel family;
@@ -172,6 +173,7 @@ class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
     on<FamilyInfoEdited>(_onEdit);
     on<FamilyProfileRequested>(_onFetch);
     on<FamilyInfoUpdated>(_onUpdate);
+    on<FamilyReset>((event, emit) => emit(FamilyInitial()));
   }
 
   Future<void> _onSubmit(
