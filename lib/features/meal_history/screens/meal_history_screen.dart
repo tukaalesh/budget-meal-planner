@@ -1,301 +1,244 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../bloc/meal_history_bloc.dart';
-import '../../recommendations/models/meal_model.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_widgets.dart';
 
-class MealHistoryScreen extends StatelessWidget {
+import '../../../core/theme/app_theme.dart';
+import '../bloc/meal_history_bloc.dart';
+import '../models/plan_history_model.dart';
+import 'plan_history_detail_screen.dart';
+
+const _kMonthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+String formatPlanDate(DateTime date) {
+  return '${date.day} ${_kMonthNames[date.month - 1]} ${date.year}';
+}
+
+/// ملاحظة: هذه الشاشة لا تُنشئ MealHistoryBloc الخاص بها، بل تتوقع أنه
+/// مزوّد من الأعلى (نفس نمط AuthCubit وFamilyBloc في التطبيق) - لأن
+/// home_screen.dart يقرأ نفس الـ Bloc في الداشبورد أيضًا، ويجب أن تكون
+/// نسخة واحدة فقط مشتركة بينهما.
+class MealHistoryScreen extends StatefulWidget {
   const MealHistoryScreen({super.key});
 
   @override
+  State<MealHistoryScreen> createState() => _MealHistoryScreenState();
+}
+
+class _MealHistoryScreenState extends State<MealHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // إذا كانت القائمة لم تُحمّل بعد فقط، لتجنّب إعادة الطلب في كل مرة
+    // يُفتح فيها التبويب (بما أن home_screen يطلبها أصلًا عند بدء التطبيق).
+    final bloc = context.read<MealHistoryBloc>();
+    if (bloc.state.listStatus == AsyncStatus.idle) {
+      bloc.add(const HistoryRequested());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          elevation: 0,
-          title: Text('سجل الوجبات'),
-          actions: [
-            BlocBuilder<MealHistoryBloc, MealHistoryState>(
-              builder: (context, state) {
-                if (state is MealHistoryLoadedState && state.meals.isNotEmpty) {
-                  return IconButton(
-                    icon: Icon(Icons.delete_sweep_outlined,
-                        color: AppColors.textSecondary),
-                    tooltip: 'مسح السجل',
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: AlertDialog(
-                            title: Text('مسح السجل',
-                                style: GoogleFonts.cairo(
-                                    fontWeight: FontWeight.w700)),
-                            content: Text('هل تريد مسح سجل الوجبات كاملاً؟',
-                                style: GoogleFonts.cairo()),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child:
-                                    Text('إلغاء', style: GoogleFonts.cairo()),
-                              ),
-                              ElevatedButton(
-                                
-                                onPressed: () {
-                                  context
-                                      .read<MealHistoryBloc>()
-                                      .add(MealHistoryCleared());
-                                  Navigator.pop(context);
-                                },
-                                child: Text('مسح',
-                                    style:
-                                        GoogleFonts.cairo(color: Colors.white)),
-                              ),
-                            ],
-                          ),
+    return const _MealHistoryView();
+  }
+}
+
+class _MealHistoryView extends StatelessWidget {
+  const _MealHistoryView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('سجل الخطط السابقة')),
+      body: BlocBuilder<MealHistoryBloc, MealHistoryState>(
+        builder: (context, state) {
+          final bloc = context.read<MealHistoryBloc>();
+
+          if (state.listStatus == AsyncStatus.loading ||
+              state.listStatus == AsyncStatus.idle) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state.listStatus == AsyncStatus.failure) {
+            return _ErrorView(
+              message: state.listErrorMessage ?? 'حدث خطأ',
+              onRetry: () => bloc.add(const HistoryRequested()),
+            );
+          }
+
+          if (state.plans.isEmpty) {
+            return const _EmptyView();
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async => bloc.add(const HistoryRequested()),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: state.plans.length,
+              itemBuilder: (context, index) {
+                final plan = state.plans[index];
+                return _PlanSummaryTile(
+                  plan: plan,
+                  onTap: () {
+                    bloc.add(PlanDetailRequested(plan.id));
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: bloc,
+                          child: PlanHistoryDetailScreen(planId: plan.id),
                         ),
-                      );
-                    },
-                  );
-                }
-                return SizedBox.shrink();
+                      ),
+                    );
+                  },
+                );
               },
             ),
-          ],
-        ),
-        body: BlocBuilder<MealHistoryBloc, MealHistoryState>(
-          builder: (context, state) {
-            if (state is MealHistoryInitial) {
-              return Center(
-                  child: CircularProgressIndicator(color: AppColors.primary));
-            }
+          );
+        },
+      ),
+    );
+  }
+}
 
-            final meals =
-                state is MealHistoryLoadedState ? state.meals : <MealModel>[];
+class _PlanSummaryTile extends StatelessWidget {
+  final PlanSummary plan;
+  final VoidCallback onTap;
 
-            if (meals.isEmpty) {
-              return EmptyState(
-                icon: Icons.history_rounded,
-                title: 'لا يوجد سجل بعد',
-                subtitle: 'الوجبات التي تحفظها من خطتك الأسبوعية تظهر هنا',
-              );
-            }
+  const _PlanSummaryTile({required this.plan, required this.onTap});
 
-            // Group total stats
-            final totalCost =
-                meals.fold<double>(0, (sum, m) => sum + m.estimatedCost);
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final dateLabel = formatPlanDate(plan.createdAt);
 
-            return CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      children: [
-                        _StatChip(
-                          icon: Icons.restaurant_menu_rounded,
-                          label: '${meals.length} وجبة محفوظة',
-                        ),
-                        SizedBox(width: 10),
-                        _StatChip(
-                          icon: Icons.payments_outlined,
-                          label: '${totalCost.round()} ل.س إجمالي',
-                        ),
-                      ],
-                    ),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(dateLabel, style: textTheme.titleMedium),
+                  Icon(Icons.chevron_left, color: AppColors.textHint),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MiniChip(
+                    icon: Icons.restaurant_menu,
+                    label: '${plan.numberOfMeals} وجبات',
                   ),
-                ),
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(20, 16, 20, 32),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final meal = meals[index];
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: _HistoryCard(
-                              meal: meal, isRecent: index == 0, onTap: () {}
-                              //  =>
-                              //  Navigator.of(context).push(
-                              //   MaterialPageRoute(
-                              //       builder: (_) => MealDetailScreen(meal: meal)),
-                              // ),
-                              ),
-                        );
-                      },
-                      childCount: meals.length,
-                    ),
+                  _MiniChip(
+                    icon: Icons.groups_outlined,
+                    label: '${plan.servings} أشخاص',
                   ),
-                ),
-              ],
-            );
-          },
+                  _MiniChip(icon: Icons.schedule, label: plan.prepTime),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('التكلفة',
+                      style: textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary)),
+                  Text(
+                    '${plan.estimatedCost.toStringAsFixed(0)} / ${plan.budget.toStringAsFixed(0)}',
+                    style: textTheme.titleSmall
+                        ?.copyWith(color: AppColors.primary),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _StatChip extends StatelessWidget {
+class _MiniChip extends StatelessWidget {
   final IconData icon;
   final String label;
-
-  const _StatChip({required this.icon, required this.label});
+  const _MiniChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.divider),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
-          SizedBox(width: 6),
-          Text(
-            label,
-            style: GoogleFonts.cairo(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600),
-          ),
+          Icon(icon, size: 14, color: AppColors.accent),
+          const SizedBox(width: 4),
+          Text(label, style: Theme.of(context).textTheme.labelMedium),
         ],
       ),
     );
   }
 }
 
-class _HistoryCard extends StatelessWidget {
-  final MealModel meal;
-  final bool isRecent;
-  final VoidCallback onTap;
-
-  const _HistoryCard({
-    required this.meal,
-    required this.isRecent,
-    required this.onTap,
-  });
+class _EmptyView extends StatelessWidget {
+  const _EmptyView();
 
   @override
   Widget build(BuildContext context) {
-    final hasMissing = meal.missingIngredients.isNotEmpty;
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isRecent
-                  ? AppColors.primary.withOpacity(0.25)
-                  : AppColors.divider,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.history, size: 56, color: AppColors.textHint),
+            const SizedBox(height: 12),
+            Text(
+              'لا يوجد لديك خطط سابقة بعد',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
             ),
-          ),
-          child: Row(
-            children: [
-              // Container(
-              //   width: 56,
-              //   height: 56,
-              //   decoration: BoxDecoration(
-              //     color: AppColors.surfaceVariant,
-              //     borderRadius: BorderRadius.circular(14),
-              //   ),
-              //   child: Center(
-              //     child: Text(meal.imageEmoji, style: TextStyle(fontSize: 28)),
-              //   ),
-              // ),
-              // SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (isRecent) ...[
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'الأحدث',
-                              style: GoogleFonts.cairo(
-                                fontSize: 9.5,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 6),
-                        ],
-                        Expanded(
-                          child: Text(
-                            meal.name,
-                            style: GoogleFonts.cairo(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(Icons.payments_outlined,
-                            size: 12, color: AppColors.textHint),
-                        SizedBox(width: 3),
-                        Text(
-                          '${meal.estimatedCost.round()} ل.س',
-                          style: GoogleFonts.cairo(
-                              fontSize: 11.5, color: AppColors.textHint),
-                        ),
-                        SizedBox(width: 10),
-                        Icon(
-                          hasMissing
-                              ? Icons.shopping_cart_outlined
-                              : Icons.check_circle_outline_rounded,
-                          size: 12,
-                          color: AppColors.textHint,
-                        ),
-                        SizedBox(width: 3),
-                        Text(
-                          hasMissing
-                              ? '${meal.missingIngredients.length} ناقصة'
-                              : 'مكتملة',
-                          style: GoogleFonts.cairo(
-                              fontSize: 11.5, color: AppColors.textHint),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_back_ios_rounded,
-                  size: 14, color: AppColors.textHint),
-            ],
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: onRetry, child: const Text('إعادة المحاولة')),
+          ],
         ),
       ),
     );

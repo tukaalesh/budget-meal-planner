@@ -1,436 +1,163 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use, unnecessary_to_list_in_spreads
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../bloc/meal_request_bloc.dart';
-import '../../recommendations/models/meal_model.dart';
-// ignore: unused_import
-import '../../recommendations/screens/recommendations_screen.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_widgets.dart';
 
-class MealRequestScreen extends StatefulWidget {
+import '../../../core/services/search_api_service.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../auth/bloc/auth_cubit.dart';
+import '../../auth/bloc/auth_state.dart';
+import '../../recommendations/screens/recommendations_screen.dart';
+import '../bloc/meal_request_bloc.dart';
+import '../models/meal_request_model.dart';
+
+class MealRequestScreen extends StatelessWidget {
   const MealRequestScreen({super.key});
 
   @override
-  State<MealRequestScreen> createState() => _MealRequestScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) {
+        final authState = context.read<AuthCubit>().state;
+        final token = authState is AuthSuccess ? authState.user.token : null;
+        return MealRequestBloc(authToken: token);
+      },
+      child: const _MealRequestView(),
+    );
+  }
 }
 
-class _MealRequestScreenState extends State<MealRequestScreen> {
-  final _budgetCtrl = TextEditingController();
-  final _ingredientNameCtrl = TextEditingController();
-  final _ingredientQtyCtrl = TextEditingController();
-  final List<String> _availableIngredients = [];
+class _MealRequestView extends StatefulWidget {
+  const _MealRequestView();
 
-  CookingTimeLevel _cookingTimeLevel = CookingTimeLevel.long;
+  @override
+  State<_MealRequestView> createState() => _MealRequestViewState();
+}
 
-  // المكونات الأساسية التي يمكن للمستخدم تحديد أنها متوفرة لديه
-  static const List<String> _basicIngredientsOptions = [
-    'زيوت',
-    'دبس رمان',
-    'معجون البندورة',
-    'معجون الفليفلة',
-    "بهارات"
-  ];
-
-  final Set<String> _selectedBasicIngredients = {};
+class _MealRequestViewState extends State<_MealRequestView> {
+  final _budgetController = TextEditingController();
+  bool _isDialogOpen = false;
 
   @override
   void dispose() {
-    _budgetCtrl.dispose();
-    _ingredientNameCtrl.dispose();
-    _ingredientQtyCtrl.dispose();
+    _budgetController.dispose();
     super.dispose();
   }
 
-  void _addIngredient() {
-    final name = _ingredientNameCtrl.text.trim();
-    final rawQty = _ingredientQtyCtrl.text.trim();
-
-    if (name.isEmpty || rawQty.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('يرجى إدخال اسم المكوّن وكميته معاً',
-              style: GoogleFonts.cairo()),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
+  void _closeDialogIfOpen() {
+    if (_isDialogOpen) {
+      Navigator.of(context, rootNavigator: true).pop();
+      _isDialogOpen = false;
     }
-
-    // إذا كانت الكمية رقماً فقط (بدون وحدة)، نضيف الوحدة تلقائياً:
-    // "حبة" للبيض، و"g" لباقي المكونات.
-    String qty = rawQty;
-    if (RegExp(r'^\d+(\.\d+)?$').hasMatch(rawQty)) {
-      final unit = name.contains('بيض') ? 'حبة' : 'g';
-      qty = '$rawQty $unit';
-    }
-
-    final entry = '$name - $qty';
-
-    setState(() {
-      _availableIngredients.add(entry);
-      _ingredientNameCtrl.clear();
-      _ingredientQtyCtrl.clear();
-    });
-  }
-
-  void _submit() {
-    final budget = double.tryParse(_budgetCtrl.text) ?? 0;
-    if (budget <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('أدخل الميزانية المتاحة', style: GoogleFonts.cairo()),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    // نضيف أي مكونات أساسية تم تحديدها إلى قائمة المكونات المتوفرة
-    final combinedIngredients = [
-      ..._availableIngredients,
-      ..._selectedBasicIngredients
-          .where((ing) => !_availableIngredients.contains(ing)),
-    ];
-
-    context.read<MealRequestBloc>().add(MealRequestSubmitted(MealRequest(
-          budget: budget,
-          availableIngredients: combinedIngredients,
-          cookingTimeLevel: _cookingTimeLevel,
-          assumeBasicsAvailable: false,
-        )));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: BlocConsumer<MealRequestBloc, MealRequestState>(
+    return Scaffold(
+      appBar: AppBar(title: const Text('طلب خطة وجبات')),
+      body: BlocConsumer<MealRequestBloc, MealRequestState>(
+        listenWhen: (prev, curr) => prev.status != curr.status,
         listener: (context, state) {
-          if (state is MealRequestSuccess) {
-            // Navigator.of(context).push(MaterialPageRoute(
-            //   builder: (_) => BlocProvider.value(
-            //     value: context.read<MealRequestBloc>(),
-            //     child: RecommendationsScreen(),
-            //   ),
-            // ));
-          } else if (state is MealRequestFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message, style: GoogleFonts.cairo()),
-                backgroundColor: AppColors.error,
+          if (state.status == SubmissionStatus.loading) {
+            _isDialogOpen = true;
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const _GeneratingPlanDialog(),
+            );
+            return;
+          }
+
+          _closeDialogIfOpen();
+
+          if (state.status == SubmissionStatus.success &&
+              state.generatedPlan != null) {
+            final requestModel = MealRequestModel(
+              budget: state.budget!,
+              servings: state.servings,
+              numberOfMeals: state.numberOfMeals,
+              daysPerMeal: state.daysPerMeal,
+              prepTime: state.prepTime,
+              availableIngredients: state.availableIngredients,
+            );
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => RecommendationsScreen(
+                  originalRequest: requestModel,
+                  plan: state.generatedPlan!,
+                ),
               ),
+            );
+          } else if (state.status == SubmissionStatus.failure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage ?? 'حدث خطأ')),
             );
           }
         },
         builder: (context, state) {
-          return Stack(
-            children: [
-              Scaffold(
-                appBar: AppBar(
-                  backgroundColor: AppColors.background,
-                  centerTitle: false,
-                  title: Text('خطة الوجبات الأسبوعية'),
+          final bloc = context.read<MealRequestBloc>();
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _BudgetField(
+                  controller: _budgetController,
+                  state: state,
+                  onChanged: (v) => bloc.add(BudgetChanged(v)),
                 ),
-                backgroundColor: AppColors.background,
-                body: CustomScrollView(
-                  slivers: [
-                    // SliverAppBar(
-                    //   pinned: true,
-                    //   expandedHeight: 90,
-                    //   backgroundColor: AppColors.surface,
-                    //   flexibleSpace: FlexibleSpaceBar(
-                    //     titlePadding: EdgeInsets.only(right: 16, bottom: 16),
-                    //     title: Text('خطة الوجبات الأسبوعية',
-                    //         style: GoogleFonts.cairo(
-                    //           fontSize: 17,
-                    //           fontWeight: FontWeight.w700,
-                    //           color: AppColors.textPrimary,
-                    //         )),
-                    //     background: Container(
-                    //       decoration: BoxDecoration(
-                    //         gradient: LinearGradient(
-                    //           colors: [
-                    //             AppColors.primary.withOpacity(0.08),
-                    //             AppColors.background
-                    //           ],
-                    //           begin: Alignment.topCenter,
-                    //           end: Alignment.bottomCenter,
-                    //         ),
-                    //       ),
-                    //       child: Row(
-                    //         children: [
-                    //           // Icon(Icons.auto_awesome_rounded,
-                    //           //     color: AppColors.secondary, size: 28),
-                    //           // SizedBox(width: 8),
-                    //           // // Text(
-                    //           // //   'دعنا نخطط لوجباتك الأسبوعية',
-                    //           // //   style: GoogleFonts.cairo(color: AppColors.textSecondary, fontSize: 13),
-                    //           // // ),
-                    //         ],
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ),
-                    SliverPadding(
-                      padding: EdgeInsets.all(20),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          // Budget
-                          _SectionCard(
-                            icon: Icons.attach_money_rounded,
-                            title: 'الميزانية المتاحة',
-                            iconColor: AppColors.success,
-                            child: AppTextField(
-                              label: 'الميزانية (بالليرة السورية)',
-                              hint: 'مثال: 500',
-                              controller: _budgetCtrl,
-                              keyboardType: TextInputType.number,
-                              // prefixIcon: Icon(Icons.money_rounded,
-                              //     color: AppColors.textHint),
-                            ),
-                          ),
-                          SizedBox(height: 16),
-
-                          // Available ingredients - name + quantity input
-                          _SectionCard(
-                            icon: Icons.kitchen_rounded,
-                            title: 'المقادير المتوفرة',
-                            iconColor: AppColors.accent,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "أضف مقادير لديك حالياً مع كميتها بالغرام حصراً",
-                                  style: GoogleFonts.cairo(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary),
-                                ),
-                                SizedBox(height: 8),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Expanded(
-                                      flex: 3,
-                                      child: AppTextField(
-                                        label: 'المكوّن',
-                                        hint: 'مثال: دجاج',
-                                        controller: _ingredientNameCtrl,
-                                        // prefixIcon: Icon(
-                                        //     Icons.food_bank_outlined,
-                                        //     color: AppColors.textHint),
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      flex: 2,
-                                      child: AppTextField(
-                                        label: 'الكمية',
-                                        hint: 'مثال: 200 غرام',
-                                        controller: _ingredientQtyCtrl,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    GestureDetector(
-                                      onTap: _addIngredient,
-                                      child: Container(
-                                        padding: EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.accent,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        child: Icon(Icons.add_rounded,
-                                            color: Colors.white, size: 20),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (_availableIngredients.isNotEmpty) ...[
-                                  SizedBox(height: 12),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: _availableIngredients.map((ing) {
-                                      return Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              AppColors.accent.withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border: Border.all(
-                                              color: AppColors.accent
-                                                  .withOpacity(0.3)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              ing,
-                                              style: GoogleFonts.cairo(
-                                                fontSize: 12,
-                                                color: AppColors.accent,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            SizedBox(width: 6),
-                                            GestureDetector(
-                                              onTap: () => setState(() =>
-                                                  _availableIngredients
-                                                      .remove(ing)),
-                                              child: Icon(
-                                                Icons.close_rounded,
-                                                size: 14,
-                                                color: AppColors.accent,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                                if (_availableIngredients.isEmpty) ...[
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'اقتراحات شائعة:',
-                                    style: GoogleFonts.cairo(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary),
-                                  ),
-                                  SizedBox(height: 6),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: ['رز', 'بصل', 'بندورة', 'برغل']
-                                        .map((ing) => GestureDetector(
-                                              onTap: () {
-                                                setState(() =>
-                                                    _ingredientNameCtrl.text =
-                                                        ing);
-                                              },
-                                              child: Container(
-                                                padding: EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 5),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.accent
-                                                      .withOpacity(0.1),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                      color: AppColors.accent
-                                                          .withOpacity(0.3)),
-                                                ),
-                                                child: Text(
-                                                  '+ $ing',
-                                                  style: GoogleFonts.cairo(
-                                                    fontSize: 12,
-                                                    color: AppColors.accent,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ),
-                                            ))
-                                        .toList(),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 16),
-
-                          // Cooking time - level choice (replaces slider)
-                          _SectionCard(
-                            icon: Icons.timer_outlined,
-                            title: 'وقت الطهي المتاح',
-                            iconColor: AppColors.secondary,
-                            child: Column(
-                              children: CookingTimeLevel.values.map((level) {
-                                return Padding(
-                                  padding: EdgeInsets.only(bottom: 10),
-                                  child: ChoiceOptionCard(
-                                    label: level.label,
-                                    subtitle: level.subtitle,
-                                    icon: Icons.timer_outlined,
-                                    isSelected: _cookingTimeLevel == level,
-                                    onTap: () => setState(
-                                        () => _cookingTimeLevel = level),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                          SizedBox(height: 16),
-
-                          // Basic ingredients checklist
-                          _SectionCard(
-                            icon: Icons.help_outline_rounded,
-                            title: 'سؤال مهم',
-                            iconColor: AppColors.primaryLight,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'حدد أي من المكونات الأساسية التالية متوفرة لديك حالياً بكميات كافية حتى لا يتم احتساب تكلفتها من ميزانيتك:',
-                                  style: GoogleFonts.cairo(
-                                    fontSize: 13.5,
-                                    color: AppColors.textPrimary,
-                                    height: 1.6,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: 14),
-                                ..._basicIngredientsOptions
-                                    .map((ing) => Padding(
-                                          padding: EdgeInsets.only(bottom: 10),
-                                          child: ChoiceOptionCard(
-                                            label: ing,
-                                            isSelected:
-                                                _selectedBasicIngredients
-                                                    .contains(ing),
-                                            onTap: () => setState(() {
-                                              if (_selectedBasicIngredients
-                                                  .contains(ing)) {
-                                                _selectedBasicIngredients
-                                                    .remove(ing);
-                                              } else {
-                                                _selectedBasicIngredients
-                                                    .add(ing);
-                                              }
-                                            }),
-                                          ),
-                                        ))
-                                    .toList(),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 28),
-
-                          // Submit button
-                          SizedBox(
-                            width: double.infinity,
-                            child: AppButton(
-                              label: "توليد اقتراحات الوجبات",
-                              onPressed: _submit,
-                              isLoading: state is MealRequestLoading,
-                            ),
-                          ),
-                          SizedBox(height: 32),
-                        ]),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 24),
+                _CounterField(
+                  label: 'عدد الأشخاص',
+                  value: state.servings,
+                  min: MealRequestBloc.minServings,
+                  max: MealRequestBloc.maxServings,
+                  onIncrement: () => bloc.add(const ServingsIncremented()),
+                  onDecrement: () => bloc.add(const ServingsDecremented()),
                 ),
-              ),
-              if (state is MealRequestLoading)
-                LoadingOverlay(
-                    message: 'جاري تحليل متطلباتك واقتراح الوجبات المناسبة...'),
-            ],
+                const SizedBox(height: 24),
+                _CounterField(
+                  label: 'عدد الوجبات',
+                  value: state.numberOfMeals,
+                  min: MealRequestBloc.minMeals,
+                  max: MealRequestBloc.maxMeals,
+                  onIncrement: () => bloc.add(const MealsCountIncremented()),
+                  onDecrement: () => bloc.add(const MealsCountDecremented()),
+                ),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  activeColor: AppColors.primary,
+                  title: const Text('هل تفضل أن تكون الأكلة الواحدة على يومين؟'),
+                  value: state.spreadOverTwoDays,
+                  onChanged: (v) =>
+                      bloc.add(SpreadOverTwoDaysToggled(v ?? false)),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<PrepTime>(
+                  value: state.prepTime,
+                  decoration: const InputDecoration(labelText: 'وقت التحضير'),
+                  items: PrepTime.values
+                      .map((p) => DropdownMenuItem(
+                            value: p,
+                            child: Text(p.label),
+                          ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) bloc.add(PrepTimeSelected(v));
+                  },
+                ),
+                const SizedBox(height: 24),
+                _IngredientsSection(state: state, bloc: bloc),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: state.status == SubmissionStatus.loading
+                      ? null
+                      : () => bloc.add(const PlanGenerationSubmitted()),
+                  child: const Text('توليد الخطة'),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -438,49 +165,348 @@ class _MealRequestScreenState extends State<MealRequestScreen> {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color iconColor;
-  final Widget child;
+// ==================== دايلوج الانتظار ====================
 
-  const _SectionCard({
-    required this.icon,
-    required this.title,
-    required this.iconColor,
-    required this.child,
+class _GeneratingPlanDialog extends StatelessWidget {
+  const _GeneratingPlanDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.primary),
+              const SizedBox(height: 20),
+              Text(
+                'جاري توليد خطتك الغذائية...',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'قد يستغرق هذا حتى دقيقة، الرجاء الانتظار',
+                textAlign: TextAlign.center,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== حقل الميزانية ====================
+
+class _BudgetField extends StatelessWidget {
+  final TextEditingController controller;
+  final MealRequestState state;
+  final ValueChanged<String> onChanged;
+
+  const _BudgetField({
+    required this.controller,
+    required this.state,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+    final showError = state.budgetTouched && !state.isBudgetValid;
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: false),
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: 'الميزانية',
+        errorText: showError ? 'الرجاء إدخال الميزانية' : null,
       ),
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-              SizedBox(width: 10),
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-            ],
+    );
+  }
+}
+
+// ==================== عداد رقمي ====================
+
+class _CounterField extends StatelessWidget {
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+
+  const _CounterField({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onIncrement,
+    required this.onDecrement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(label, style: Theme.of(context).textTheme.bodyLarge),
+        ),
+        _RoundIconButton(
+          icon: Icons.remove,
+          onPressed: value > min ? onDecrement : null,
+        ),
+        SizedBox(
+          width: 40,
+          child: Text(
+            '$value',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          SizedBox(height: 16),
-          child,
+        ),
+        _RoundIconButton(
+          icon: Icons.add,
+          onPressed: value < max ? onIncrement : null,
+        ),
+      ],
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  const _RoundIconButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: enabled
+              ? AppColors.primary.withOpacity(0.12)
+              : AppColors.divider.withOpacity(0.4),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? AppColors.primary : AppColors.textHint,
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== قسم المكونات المتاحة ====================
+
+class _IngredientsSection extends StatelessWidget {
+  final MealRequestState state;
+  final MealRequestBloc bloc;
+
+  const _IngredientsSection({required this.state, required this.bloc});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('المكونات المتوفرة لديك (اختياري)',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        for (int i = 0; i < state.availableIngredients.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _IngredientRow(
+              ingredient: state.availableIngredients[i],
+              onQuantityChanged: (q) =>
+                  bloc.add(IngredientQuantityChanged(i, q)),
+              onRemove: () => bloc.add(IngredientRemoved(i)),
+            ),
+          ),
+        OutlinedButton.icon(
+          onPressed: () => _showAddIngredientSheet(context, bloc),
+          icon: const Icon(Icons.add),
+          label: const Text('إضافة مكوّن'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showAddIngredientSheet(
+      BuildContext context, MealRequestBloc bloc) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _AddIngredientSheet(bloc: bloc),
+    );
+  }
+}
+
+class _IngredientRow extends StatelessWidget {
+  final AvailableIngredient ingredient;
+  final ValueChanged<double> onQuantityChanged;
+  final VoidCallback onRemove;
+
+  const _IngredientRow({
+    required this.ingredient,
+    required this.onQuantityChanged,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(ingredient.name,
+                  style: Theme.of(context).textTheme.bodyLarge),
+            ),
+            SizedBox(
+              width: 90,
+              child: TextFormField(
+                initialValue: ingredient.quantity ==
+                        ingredient.quantity.roundToDouble()
+                    ? ingredient.quantity.toInt().toString()
+                    : ingredient.quantity.toString(),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  isDense: true,
+                  suffixText: ingredient.unit,
+                ),
+                onChanged: (v) {
+                  final parsed = double.tryParse(v);
+                  if (parsed != null) onQuantityChanged(parsed);
+                },
+              ),
+            ),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// شيت لإضافة مكوّن جديد: بحث عن اسم المكوّن + إدخال الكمية.
+/// البحث يستدعي SearchApiService مباشرة (مو عبر الـ Bloc) لأن نتائج
+/// البحث محلية ومؤقتة داخل هذا الشيت فقط.
+class _AddIngredientSheet extends StatefulWidget {
+  final MealRequestBloc bloc;
+  const _AddIngredientSheet({required this.bloc});
+
+  @override
+  State<_AddIngredientSheet> createState() => _AddIngredientSheetState();
+}
+
+class _AddIngredientSheetState extends State<_AddIngredientSheet> {
+  IngredientOption? _selected;
+  final _quantityController = TextEditingController();
+
+  Future<Iterable<IngredientOption>> _search(String query) async {
+    if (query.trim().length < 2) return const [];
+    final result = await SearchApiService.searchIngredients(query);
+    if (!result.isSuccess || result.data == null) return const [];
+    return result.data!.map((name) => IngredientOption(name: name));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('إضافة مكوّن', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 16),
+          Autocomplete<IngredientOption>(
+            displayStringForOption: (o) => o.name,
+            optionsBuilder: (textEditingValue) => _search(textEditingValue.text),
+            onSelected: (option) => setState(() => _selected = option),
+            fieldViewBuilder:
+                (context, controller, focusNode, onFieldSubmitted) {
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: const InputDecoration(
+                  labelText: 'ابحث عن اسم المكوّن',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _quantityController,
+            enabled: _selected != null,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: 'الكمية',
+              suffixText: _selected?.unit,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _selected == null
+                ? null
+                : () {
+                    final qty = double.tryParse(_quantityController.text);
+                    if (qty == null || qty <= 0) return;
+                    widget.bloc.add(IngredientAdded(
+                      AvailableIngredient(
+                        name: _selected!.name,
+                        unit: _selected!.unit,
+                        quantity: qty,
+                      ),
+                    ));
+                    Navigator.of(context).pop();
+                  },
+            child: const Text('إضافة'),
+          ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    super.dispose();
   }
 }

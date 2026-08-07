@@ -11,6 +11,5 @@ void main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-
   runApp(const App());
 }

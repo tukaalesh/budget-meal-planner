@@ -9,8 +9,8 @@ import 'package:sho_htghadona/features/family/screens/family_info_screen.dart';
 import '../features/family/bloc/family_bloc.dart';
 import '../features/meal_request/screens/meal_request_screen.dart';
 import '../features/meal_history/bloc/meal_history_bloc.dart';
+import '../features/meal_history/models/plan_history_model.dart';
 import '../features/meal_history/screens/meal_history_screen.dart';
-import '../features/recommendations/models/meal_model.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/app_widgets.dart';
 
@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<MealHistoryBloc>().add(MealHistoryLoaded());
+    context.read<MealHistoryBloc>().add(const HistoryRequested());
   }
 
   @override
@@ -125,12 +125,13 @@ class _DashboardTab extends StatelessWidget {
 
         return BlocBuilder<MealHistoryBloc, MealHistoryState>(
           builder: (context, histState) {
-            final recentMeals = histState is MealHistoryLoadedState
-                ? histState.meals.take(3).toList()
-                : <MealModel>[];
-            final mealsCount = histState is MealHistoryLoadedState
-                ? histState.meals.length
-                : 0;
+            final recentPlans = histState.listStatus == AsyncStatus.success
+                ? histState.plans.take(3).toList()
+                : <PlanSummary>[];
+            // مجموع عدد الوجبات عبر كل الخطط المحفوظة (بديل "عدد الوجبات
+            // المحفوظة" بما أن الـ API يرجع خططًا لا وجبات مفردة).
+            final mealsCount = histState.plans
+                .fold<int>(0, (sum, p) => sum + p.numberOfMeals);
 
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -202,9 +203,9 @@ class _DashboardTab extends StatelessWidget {
                       SizedBox(height: 17),
 
                       // ── Recent meals ───────────────────────────
-                      if (recentMeals.isNotEmpty) ...[
+                      if (recentPlans.isNotEmpty) ...[
                         SectionHeader(
-                          title: 'آخر الوجبات',
+                          title: 'آخر الخطط',
                           trailing: TextButton(
                             onPressed: () {
                               final homeState = context
@@ -223,9 +224,9 @@ class _DashboardTab extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: 12),
-                        ...recentMeals.map((meal) => Padding(
+                        ...recentPlans.map((plan) => Padding(
                               padding: EdgeInsets.only(bottom: 10),
-                              child: _RecentMealTile(meal: meal),
+                              child: _RecentMealTile(plan: plan),
                             )),
                       ] else
                         _NoMealsYetCard(
@@ -469,10 +470,12 @@ class _TipCard extends StatelessWidget {
   }
 }
 
-/// Recent meal tile shown in the dashboard's "آخر الوجبات" list.
+/// Recent plan tile shown in the dashboard's "آخر الخطط" list.
+/// (كانت سابقًا تعرض وجبة مفردة MealModel، وأصبحت تعرض ملخص خطة PlanSummary
+/// لأن /api/plans يرجع خططًا لا وجبات مفردة - نفس التصميم البصري بالضبط).
 class _RecentMealTile extends StatelessWidget {
-  final MealModel meal;
-  const _RecentMealTile({required this.meal});
+  final PlanSummary plan;
+  const _RecentMealTile({required this.plan});
 
   @override
   Widget build(BuildContext context) {
@@ -485,47 +488,25 @@ class _RecentMealTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Container(
-          //   width: 48,
-          //   height: 48,
-          //   decoration: BoxDecoration(
-          //     color: AppColors.surfaceVariant,
-          //     borderRadius: BorderRadius.circular(12),
-          //   ),
-          //   child: Center(
-          //     child: Text(meal.imageEmoji, style: TextStyle(fontSize: 22)),
-          //   ),
-          // ),
-          // SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  meal.name,
+                  '${plan.numberOfMeals} وجبات لـ ${plan.servings} ${plan.servings == 1 ? "شخص" : "أشخاص"}',
                   style: GoogleFonts.cairo(
                       fontSize: 14, fontWeight: FontWeight.w700),
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 3),
                 Text(
-                  meal.category,
+                  plan.prepTime,
                   style: GoogleFonts.cairo(
                       fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
             ),
           ),
-
-          // SizedBox(width: 3),
-          // Text(
-          //   meal.rating.toString(),
-          //   style: GoogleFonts.cairo(
-          //     fontSize: 12,
-          //     fontWeight: FontWeight.w700,
-          //     color: AppColors.textPrimary,
-          //   ),
-          // ),
         ],
       ),
     );

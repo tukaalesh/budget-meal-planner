@@ -1,64 +1,148 @@
-// ignore_for_file: prefer_const_literals_to_create_immutables
-
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../recommendations/models/meal_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../core/services/plan_api_service.dart';
+import '../models/plan_history_model.dart';
+
+// ==================== Events ====================
 
 abstract class MealHistoryEvent extends Equatable {
+  const MealHistoryEvent();
   @override
   List<Object?> get props => [];
 }
 
-class MealHistoryAdded extends MealHistoryEvent {
-  final MealModel meal;
-  MealHistoryAdded(this.meal);
-  @override
-  List<Object?> get props => [meal];
+class HistoryRequested extends MealHistoryEvent {
+  const HistoryRequested();
 }
 
-class MealHistoryLoaded extends MealHistoryEvent {}
-
-class MealHistoryCleared extends MealHistoryEvent {}
-
-abstract class MealHistoryState extends Equatable {
+class PlanDetailRequested extends MealHistoryEvent {
+  final int planId;
+  const PlanDetailRequested(this.planId);
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [planId];
 }
 
-class MealHistoryInitial extends MealHistoryState {}
+// ==================== State ====================
 
-class MealHistoryLoadedState extends MealHistoryState {
-  final List<MealModel> meals;
-  MealHistoryLoadedState(this.meals);
+enum AsyncStatus { idle, loading, success, failure }
+
+class MealHistoryState extends Equatable {
+  final AsyncStatus listStatus;
+  final List<PlanSummary> plans;
+  final String? listErrorMessage;
+
+  final AsyncStatus detailStatus;
+  final PlanDetail? selectedPlan;
+  final String? detailErrorMessage;
+
+  const MealHistoryState({
+    this.listStatus = AsyncStatus.idle,
+    this.plans = const [],
+    this.listErrorMessage,
+    this.detailStatus = AsyncStatus.idle,
+    this.selectedPlan,
+    this.detailErrorMessage,
+  });
+
+  MealHistoryState copyWith({
+    AsyncStatus? listStatus,
+    List<PlanSummary>? plans,
+    String? listErrorMessage,
+    AsyncStatus? detailStatus,
+    PlanDetail? selectedPlan,
+    String? detailErrorMessage,
+  }) {
+    return MealHistoryState(
+      listStatus: listStatus ?? this.listStatus,
+      plans: plans ?? this.plans,
+      listErrorMessage: listErrorMessage,
+      detailStatus: detailStatus ?? this.detailStatus,
+      selectedPlan: selectedPlan ?? this.selectedPlan,
+      detailErrorMessage: detailErrorMessage,
+    );
+  }
+
   @override
-  List<Object?> get props => [meals];
+  List<Object?> get props => [
+        listStatus,
+        plans,
+        listErrorMessage,
+        detailStatus,
+        selectedPlan,
+        detailErrorMessage,
+      ];
 }
+
+// ==================== Bloc ====================
 
 class MealHistoryBloc extends Bloc<MealHistoryEvent, MealHistoryState> {
-  final List<MealModel> _history = [];
+  /// TODO: مرّر التوكن الحقيقي عند إنشاء الـ Bloc (نفس نمط باقي الـ Blocs).
+  final String? authToken;
 
-  MealHistoryBloc() : super(MealHistoryInitial()) {
-    on<MealHistoryLoaded>(_onLoad);
-    on<MealHistoryAdded>(_onAdd);
-    on<MealHistoryCleared>(_onClear);
+  MealHistoryBloc({this.authToken}) : super(const MealHistoryState()) {
+    on<HistoryRequested>(_onHistoryRequested);
+    on<PlanDetailRequested>(_onPlanDetailRequested);
   }
 
-  Future<void> _onLoad(MealHistoryLoaded event, Emitter<MealHistoryState> emit) async {
-    if (_history.isEmpty) {
-      _history.addAll(MealRepository.getAllMealsHistory());
+  Future<void> _onHistoryRequested(
+    HistoryRequested event,
+    Emitter<MealHistoryState> emit,
+  ) async {
+    if (authToken == null || authToken!.isEmpty) {
+      emit(state.copyWith(
+        listStatus: AsyncStatus.failure,
+        listErrorMessage: 'يجب تسجيل الدخول أولاً',
+      ));
+      return;
     }
-    emit(MealHistoryLoadedState(List.from(_history)));
-  }
 
-  Future<void> _onAdd(MealHistoryAdded event, Emitter<MealHistoryState> emit) async {
-    if (!_history.any((m) => m.id == event.meal.id)) {
-      _history.insert(0, event.meal);
+    emit(state.copyWith(listStatus: AsyncStatus.loading));
+
+    final result = await PlansApiService.getPlans(token: authToken!);
+
+    if (result.isSuccess && result.data != null) {
+      emit(state.copyWith(
+        listStatus: AsyncStatus.success,
+        plans: result.data,
+      ));
+    } else {
+      emit(state.copyWith(
+        listStatus: AsyncStatus.failure,
+        listErrorMessage: result.error ?? 'حدث خطأ غير متوقع',
+      ));
     }
-    emit(MealHistoryLoadedState(List.from(_history)));
   }
 
-  Future<void> _onClear(MealHistoryCleared event, Emitter<MealHistoryState> emit) async {
-    _history.clear();
-    emit(MealHistoryLoadedState([]));
+  Future<void> _onPlanDetailRequested(
+    PlanDetailRequested event,
+    Emitter<MealHistoryState> emit,
+  ) async {
+    if (authToken == null || authToken!.isEmpty) {
+      emit(state.copyWith(
+        detailStatus: AsyncStatus.failure,
+        detailErrorMessage: 'يجب تسجيل الدخول أولاً',
+      ));
+      return;
+    }
+
+    emit(state.copyWith(detailStatus: AsyncStatus.loading));
+
+    final result = await PlansApiService.getPlanDetail(
+      planId: event.planId,
+      token: authToken!,
+    );
+
+    if (result.isSuccess && result.data != null) {
+      emit(state.copyWith(
+        detailStatus: AsyncStatus.success,
+        selectedPlan: result.data,
+      ));
+    } else {
+      emit(state.copyWith(
+        detailStatus: AsyncStatus.failure,
+        detailErrorMessage: result.error ?? 'حدث خطأ غير متوقع',
+      ));
+    }
   }
 }
