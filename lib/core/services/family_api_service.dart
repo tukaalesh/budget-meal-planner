@@ -64,7 +64,7 @@
 //       if (response.statusCode == 200 || response.statusCode == 201) {
 //         return ApiResult.success(true);
 //       } else {
-       
+
 //         try {
 //           final decoded = json.decode(utf8.decode(response.bodyBytes));
 //           final msg = decoded['message'] ??
@@ -87,9 +87,10 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:sho_htghadona/main.dart';
 import '../../features/family/models/family_model.dart';
 
-const _kBaseUrl = 'http://10.0.2.2:8000/api';
+// const _kBaseUrl = 'http://10.0.2.2:8000/api';
 
 // ── Result wrapper
 class ApiResult<T> {
@@ -113,7 +114,7 @@ class FamilyApiService {
     required List<String> alwaysAvailableIngredients,
   }) async {
     try {
-      final uri = Uri.parse('$_kBaseUrl/family/setup');
+      final uri = Uri.parse('$kBaseUrl/family/setup');
 
       final body = json.encode({
         'family_members': memberCount,
@@ -155,11 +156,12 @@ class FamilyApiService {
       return ApiResult.failure('خطأ في الاتصال بالخادم');
     }
   }
+
   static Future<ApiResult<FamilyModel>> fetchFamilyProfile({
     required String token,
   }) async {
     try {
-      final uri = Uri.parse('$_kBaseUrl/family/profile');
+      final uri = Uri.parse('$kBaseUrl/family/profile');
 
       final response = await _client.get(
         uri,
@@ -192,6 +194,7 @@ class FamilyApiService {
       return ApiResult.failure('خطأ في الاتصال بالخادم');
     }
   }
+
   /// Response: { "message": "تم تعديل معلومات العائلة بنجاح" }
   static Future<ApiResult<bool>> updateFamilyInfo({
     required String token,
@@ -203,7 +206,7 @@ class FamilyApiService {
     required List<String> alwaysAvailableIngredients,
   }) async {
     try {
-      final uri = Uri.parse('$_kBaseUrl/family/profile');
+      final uri = Uri.parse('$kBaseUrl/family/profile');
 
       final body = json.encode({
         'family_members': memberCount,

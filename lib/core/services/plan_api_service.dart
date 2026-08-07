@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:sho_htghadona/main.dart';
 
 import 'search_api_service.dart' show ApiResult;
 import '../../features/recommendations/models/meal_model.dart';
 import '../../features/recommendations/models/shopping_list_model.dart';
 import '../../features/meal_history/models/plan_history_model.dart';
 
-const _kBaseUrl = 'http://10.0.2.2:8000/api';
+// const _kBaseUrl = 'http://10.0.2.2:8000/api';
 
 class PlansApiService {
   static final _client = http.Client();
@@ -26,7 +27,7 @@ class PlansApiService {
     required String token,
   }) async {
     try {
-      final uri = Uri.parse('$_kBaseUrl/plans/generate');
+      final uri = Uri.parse('$kBaseUrl/plans/generate');
 
       final response = await _client
           .post(uri, headers: _headers(token), body: json.encode(body))
@@ -66,7 +67,7 @@ class PlansApiService {
     required String token,
   }) async {
     try {
-      final uri = Uri.parse('$_kBaseUrl/plans/accept');
+      final uri = Uri.parse('$kBaseUrl/plans/accept');
 
       final response = await _client
           .post(uri, headers: _headers(token), body: json.encode(body))
@@ -103,7 +104,7 @@ class PlansApiService {
     required String token,
   }) async {
     try {
-      final uri = Uri.parse('$_kBaseUrl/plans');
+      final uri = Uri.parse('$kBaseUrl/plans');
 
       final response = await _client
           .get(uri, headers: _headers(token))
@@ -132,7 +133,7 @@ class PlansApiService {
     required String token,
   }) async {
     try {
-      final uri = Uri.parse('$_kBaseUrl/plans/$planId');
+      final uri = Uri.parse('$kBaseUrl/plans/$planId');
 
       final response = await _client
           .get(uri, headers: _headers(token))

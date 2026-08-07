@@ -3,9 +3,10 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:sho_htghadona/main.dart';
 
 
-const _kBaseUrl = 'http://10.0.2.2:8000/api';
+// const _kBaseUrl = 'http://10.0.2.2:8000/api';
 
 class ApiResult<T> {
   final T? data;
@@ -23,7 +24,7 @@ class SearchApiService {
   static Future<ApiResult<List<String>>> searchIngredients(String query) async {
     if (query.trim().isEmpty) return ApiResult.success([]);
     try {
-      final uri = Uri.parse('$_kBaseUrl/ingredients/search')
+      final uri = Uri.parse('$kBaseUrl/ingredients/search')
           .replace(queryParameters: {'query': query.trim()});
 
       final response = await _client
@@ -42,7 +43,7 @@ class SearchApiService {
   static Future<ApiResult<List<String>>> searchMeals(String query) async {
     if (query.trim().isEmpty) return ApiResult.success([]);
     try {
-      final uri = Uri.parse('$_kBaseUrl/meals/search')
+      final uri = Uri.parse('$kBaseUrl/meals/search')
           .replace(queryParameters: {'query': query.trim()});
 
       final response = await _client

@@ -1,16 +1,18 @@
 import 'dart:convert';
+import 'package:sho_htghadona/main.dart';
+
 import '../models/user_model.dart';
 import 'package:http/http.dart' as http;
 
 class AuthRepository {
-  final String baseUrl = 'http://10.0.2.2:8000/api';
+  // final String baseUrl = 'http://10.0.2.2:8000/api';
 
   Future<UserModel> register({
     required String name,
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('$baseUrl/register');
+    final uri = Uri.parse('$kBaseUrl/register');
 
     final response = await http.post(
       uri,
@@ -64,7 +66,7 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('$baseUrl/login');
+    final uri = Uri.parse('$kBaseUrl/login');
     final response = await http.post(
       uri,
       headers: {
@@ -86,7 +88,7 @@ class AuthRepository {
   }
 
   Future<void> logout(String token) async {
-    final uri = Uri.parse('$baseUrl/logout');
+    final uri = Uri.parse('$kBaseUrl/logout');
     await http.post(
       uri,
       headers: {
