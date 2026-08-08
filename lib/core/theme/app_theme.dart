@@ -185,7 +185,7 @@ class AppTheme {
         labelStyle:
             GoogleFonts.cairo(color: AppColors.textSecondary, fontSize: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.cardBg,
         elevation: 0,
         shape: RoundedRectangleBorder(
