@@ -6,7 +6,6 @@ import '../../meal_request/models/meal_request_model.dart';
 import '../models/meal_model.dart';
 import '../models/shopping_list_model.dart';
 
-// ==================== Events ====================
 
 abstract class RecommendationsEvent extends Equatable {
   const RecommendationsEvent();
@@ -29,20 +28,17 @@ class PlanAcceptRequested extends RecommendationsEvent {
   const PlanAcceptRequested();
 }
 
-// ==================== State ====================
 
 enum AsyncStatus { idle, loading, success, failure }
 
 class RecommendationsState extends Equatable {
-  /// معلومات الطلب الأصلي (الميزانية، عدد الأشخاص...) - تبقى ثابتة
-  /// وتُستخدم في كل من إعادة التوليد وطلب القبول.
   final MealRequestModel requestModel;
 
-  /// الخطة المعروضة حاليًا.
   final GeneratedPlanModel plan;
 
-  /// معرّفات الوجبات التي أعجبت المستخدم (meal_id).
   final Set<int> likedMealIds;
+
+  final Set<int> excludedMealIds;
 
   final AsyncStatus regenerateStatus;
   final AsyncStatus acceptStatus;
@@ -53,6 +49,7 @@ class RecommendationsState extends Equatable {
     required this.requestModel,
     required this.plan,
     this.likedMealIds = const {},
+    this.excludedMealIds = const {},
     this.regenerateStatus = AsyncStatus.idle,
     this.acceptStatus = AsyncStatus.idle,
     this.errorMessage,
@@ -64,6 +61,7 @@ class RecommendationsState extends Equatable {
   RecommendationsState copyWith({
     GeneratedPlanModel? plan,
     Set<int>? likedMealIds,
+    Set<int>? excludedMealIds,
     AsyncStatus? regenerateStatus,
     AsyncStatus? acceptStatus,
     String? errorMessage,
@@ -73,6 +71,7 @@ class RecommendationsState extends Equatable {
       requestModel: requestModel,
       plan: plan ?? this.plan,
       likedMealIds: likedMealIds ?? this.likedMealIds,
+      excludedMealIds: excludedMealIds ?? this.excludedMealIds,
       regenerateStatus: regenerateStatus ?? this.regenerateStatus,
       acceptStatus: acceptStatus ?? this.acceptStatus,
       errorMessage: errorMessage,
@@ -85,6 +84,7 @@ class RecommendationsState extends Equatable {
         requestModel,
         plan,
         likedMealIds,
+        excludedMealIds,
         regenerateStatus,
         acceptStatus,
         errorMessage,
@@ -144,11 +144,18 @@ class RecommendationsBloc
             ))
         .toList();
 
-    // وقائمة استبعاد لكل وجبة لم يُعجب بها المستخدم (الباقي من نفس الخطة).
-    final excludedMealIds = state.plan.meals
+    // الوجبات غير المُعجب بها بهذه الجولة تحديدًا...
+    final newlyExcludedIds = state.plan.meals
         .where((m) => !state.likedMealIds.contains(m.mealId))
         .map((m) => m.mealId)
-        .toList();
+        .toSet();
+
+    // ...تُضاف إلى كل الاستبعادات المتراكمة من الجولات السابقة، حتى لا
+    // تُقترح أي وجبة رُفضت سابقًا مرة أخرى بأي جولة قادمة.
+    final cumulativeExcludedIds = {
+      ...state.excludedMealIds,
+      ...newlyExcludedIds,
+    };
 
     final requestForRegeneration = MealRequestModel(
       budget: state.requestModel.budget,
@@ -158,7 +165,7 @@ class RecommendationsBloc
       prepTime: state.requestModel.prepTime,
       availableIngredients: state.requestModel.availableIngredients,
       requiredMeals: likedMeals,
-      excludedMeals: excludedMealIds,
+      excludedMeals: cumulativeExcludedIds.toList(),
     );
 
     final result = await PlansApiService.generatePlan(
@@ -170,10 +177,9 @@ class RecommendationsBloc
       emit(state.copyWith(
         regenerateStatus: AsyncStatus.success,
         plan: result.data,
-        // نفرّغ قائمة الإعجابات لأن الوجبات المُعجب بها ستكون ضمن
-        // الخطة الجديدة أصلًا (required_meals)، ونريد المستخدم يبدأ
-        // تقييمه للخطة الجديدة من جديد.
+        // نفرّغ إعجابات هذه الجولة فقط، ونحفظ الاستبعادات التراكمية.
         likedMealIds: const {},
+        excludedMealIds: cumulativeExcludedIds,
       ));
     } else {
       emit(state.copyWith(
