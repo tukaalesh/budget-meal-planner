@@ -129,6 +129,7 @@ class FamilyInfoEdited extends FamilyEvent {
 class FamilyProfileRequested extends FamilyEvent {}
 class FamilyReset extends FamilyEvent {}
 
+
 class FamilyInfoUpdated extends FamilyEvent {
   final FamilyModel family;
   FamilyInfoUpdated(this.family);

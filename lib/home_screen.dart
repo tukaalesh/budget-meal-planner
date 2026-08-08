@@ -642,6 +642,7 @@ class _ProfileTab extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
+                  context.read<FamilyBloc>().add(FamilyReset());
                   authCubit.logout();
                 },
                 style: ElevatedButton.styleFrom(
