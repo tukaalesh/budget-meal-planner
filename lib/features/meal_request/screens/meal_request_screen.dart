@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -341,29 +343,27 @@ class _IngredientsSection extends StatelessWidget {
             ),
           ),
         OutlinedButton.icon(
-          onPressed: () => _showAddIngredientSheet(context, bloc),
+          onPressed: () async {
+            final result = await Navigator.of(context).push<AvailableIngredient>(
+              MaterialPageRoute(builder: (_) => const _AddIngredientPage()),
+            );
+            if (result != null) {
+              bloc.add(IngredientAdded(result));
+            }
+          },
           icon: const Icon(Icons.add),
           label: const Text('إضافة مكوّن'),
         ),
       ],
     );
   }
-
-  Future<void> _showAddIngredientSheet(
-      BuildContext context, MealRequestBloc bloc) async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _AddIngredientSheet(bloc: bloc),
-    );
-  }
 }
 
-class _IngredientRow extends StatelessWidget {
+/// صف مكوّن واحد. StatefulWidget بـ TextEditingController حقيقي حتى يتزامن
+/// عرض الكمية تلقائيًا لما تتغيّر من الخارج (مثلًا عند دمج كميات نفس
+/// المكوّن) - عكس TextFormField(initialValue: ...) اللي ما يتحدّث إلا
+/// أول مرة يُبنى فيها الودجت فقط.
+class _IngredientRow extends StatefulWidget {
   final AvailableIngredient ingredient;
   final ValueChanged<double> onQuantityChanged;
   final VoidCallback onRemove;
@@ -375,6 +375,38 @@ class _IngredientRow extends StatelessWidget {
   });
 
   @override
+  State<_IngredientRow> createState() => _IngredientRowState();
+}
+
+class _IngredientRowState extends State<_IngredientRow> {
+  late final TextEditingController _controller;
+
+  String _formatQty(double q) =>
+      q == q.roundToDouble() ? q.toInt().toString() : q.toString();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _formatQty(widget.ingredient.quantity));
+  }
+
+  @override
+  void didUpdateWidget(covariant _IngredientRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newText = _formatQty(widget.ingredient.quantity);
+    if (_controller.text != newText) {
+      _controller.text = newText;
+      _controller.selection = TextSelection.collapsed(offset: newText.length);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
@@ -383,31 +415,28 @@ class _IngredientRow extends StatelessWidget {
           children: [
             Expanded(
               flex: 2,
-              child: Text(ingredient.name,
+              child: Text(widget.ingredient.name,
                   style: Theme.of(context).textTheme.bodyLarge),
             ),
             SizedBox(
               width: 90,
-              child: TextFormField(
-                initialValue: ingredient.quantity ==
-                        ingredient.quantity.roundToDouble()
-                    ? ingredient.quantity.toInt().toString()
-                    : ingredient.quantity.toString(),
+              child: TextField(
+                controller: _controller,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 textAlign: TextAlign.center,
                 decoration: InputDecoration(
                   isDense: true,
-                  suffixText: ingredient.unit,
+                  suffixText: widget.ingredient.unit,
                 ),
                 onChanged: (v) {
                   final parsed = double.tryParse(v);
-                  if (parsed != null) onQuantityChanged(parsed);
+                  if (parsed != null) widget.onQuantityChanged(parsed);
                 },
               ),
             ),
             IconButton(
-              onPressed: onRemove,
+              onPressed: widget.onRemove,
               icon: const Icon(Icons.delete_outline, color: AppColors.error),
             ),
           ],
@@ -417,96 +446,189 @@ class _IngredientRow extends StatelessWidget {
   }
 }
 
-/// شيت لإضافة مكوّن جديد: بحث عن اسم المكوّن + إدخال الكمية.
-/// البحث يستدعي SearchApiService مباشرة (مو عبر الـ Bloc) لأن نتائج
-/// البحث محلية ومؤقتة داخل هذا الشيت فقط.
-class _AddIngredientSheet extends StatefulWidget {
-  final MealRequestBloc bloc;
-  const _AddIngredientSheet({required this.bloc});
+/// صفحة كاملة لإضافة مكوّن: مربع بحث ثابت بالأعلى، وتحته قائمة نتائج
+/// تملأ باقي الشاشة (بدل قائمة صغيرة منسدلة يصعب التمرير فيها).
+/// لا يمكن إضافة مكوّن إلا باختياره من القائمة فعليًا - فيستحيل إدخال
+/// اسم غير موجود عندنا، بعكس الكتابة الحرة في حقل نصي عادي.
+class _AddIngredientPage extends StatefulWidget {
+  const _AddIngredientPage();
 
   @override
-  State<_AddIngredientSheet> createState() => _AddIngredientSheetState();
+  State<_AddIngredientPage> createState() => _AddIngredientPageState();
 }
 
-class _AddIngredientSheetState extends State<_AddIngredientSheet> {
-  IngredientOption? _selected;
-  final _quantityController = TextEditingController();
+class _AddIngredientPageState extends State<_AddIngredientPage> {
+  final _searchController = TextEditingController();
+  Timer? _debounce;
+  List<IngredientOption> _results = [];
+  bool _isSearching = false;
+  bool _searched = false;
 
-  Future<Iterable<IngredientOption>> _search(String query) async {
-    if (query.trim().length < 2) return const [];
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () => _search(query));
+  }
+
+  Future<void> _search(String query) async {
+    if (query.trim().length < 2) {
+      setState(() {
+        _results = [];
+        _searched = false;
+      });
+      return;
+    }
+    setState(() => _isSearching = true);
     final result = await SearchApiService.searchIngredients(query);
-    if (!result.isSuccess || result.data == null) return const [];
-    return result.data!.map((name) => IngredientOption(name: name));
+    if (!mounted) return;
+    setState(() {
+      _isSearching = false;
+      _searched = true;
+      _results = (result.isSuccess && result.data != null)
+          ? result.data!.map((name) => IngredientOption(name: name)).toList()
+          : [];
+    });
+  }
+
+  Future<void> _selectIngredient(IngredientOption option) async {
+    final quantity = await showDialog<double>(
+      context: context,
+      builder: (_) => _QuantityDialog(option: option),
+    );
+    if (quantity != null && quantity > 0 && mounted) {
+      Navigator.of(context).pop(
+        AvailableIngredient(
+          name: option.name,
+          unit: option.unit,
+          quantity: quantity,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Scaffold(
+      appBar: AppBar(title: const Text('إضافة مكوّن')),
+      body: Column(
         children: [
-          Text('إضافة مكوّن', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          Autocomplete<IngredientOption>(
-            displayStringForOption: (o) => o.name,
-            optionsBuilder: (textEditingValue) => _search(textEditingValue.text),
-            onSelected: (option) => setState(() => _selected = option),
-            fieldViewBuilder:
-                (context, controller, focusNode, onFieldSubmitted) {
-              return TextField(
-                controller: controller,
-                focusNode: focusNode,
-                decoration: const InputDecoration(
-                  labelText: 'ابحث عن اسم المكوّن',
-                  prefixIcon: Icon(Icons.search),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _quantityController,
-            enabled: _selected != null,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: 'الكمية',
-              suffixText: _selected?.unit,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              onChanged: _onSearchChanged,
+              decoration: const InputDecoration(
+                labelText: 'ابحث عن اسم المكوّن',
+                prefixIcon: Icon(Icons.search),
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _selected == null
-                ? null
-                : () {
-                    final qty = double.tryParse(_quantityController.text);
-                    if (qty == null || qty <= 0) return;
-                    widget.bloc.add(IngredientAdded(
-                      AvailableIngredient(
-                        name: _selected!.name,
-                        unit: _selected!.unit,
-                        quantity: qty,
-                      ),
-                    ));
-                    Navigator.of(context).pop();
-                  },
-            child: const Text('إضافة'),
-          ),
+          Expanded(child: _buildResultsList()),
         ],
       ),
     );
   }
 
+  Widget _buildResultsList() {
+    if (_isSearching) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (!_searched) {
+      return Center(
+        child: Text(
+          'اكتب حرفين على الأقل للبحث عن مكوّن',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+      );
+    }
+    if (_results.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'لا يوجد مكوّن بهذا الاسم عندنا',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
+      );
+    }
+    return ListView.separated(
+      itemCount: _results.length,
+      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.divider),
+      itemBuilder: (context, index) {
+        final option = _results[index];
+        return ListTile(
+          title: Text(option.name),
+          trailing: Text(
+            option.unit,
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          onTap: () => _selectIngredient(option),
+        );
+      },
+    );
+  }
+}
+
+/// حوار بسيط لإدخال الكمية بعد اختيار المكوّن من القائمة.
+class _QuantityDialog extends StatefulWidget {
+  final IngredientOption option;
+  const _QuantityDialog({required this.option});
+
+  @override
+  State<_QuantityDialog> createState() => _QuantityDialogState();
+}
+
+class _QuantityDialogState extends State<_QuantityDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
   @override
   void dispose() {
-    _quantityController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  void _confirm() {
+    final value = double.tryParse(_controller.text);
+    if (value == null || value <= 0) {
+      setState(() => _error = 'أدخل كمية صحيحة أكبر من صفر');
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.option.name),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: InputDecoration(
+          labelText: 'الكمية',
+          suffixText: widget.option.unit,
+          errorText: _error,
+        ),
+        onSubmitted: (_) => _confirm(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('إلغاء'),
+        ),
+        ElevatedButton(onPressed: _confirm, child: const Text('إضافة')),
+      ],
+    );
   }
 }

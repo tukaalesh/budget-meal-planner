@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/services/plan_api_service.dart';
+import '../../auth/bloc/auth_cubit.dart';
+import '../../auth/bloc/auth_state.dart';
 import '../models/plan_history_model.dart';
 
 // ==================== Events ====================
@@ -77,19 +79,29 @@ class MealHistoryState extends Equatable {
 // ==================== Bloc ====================
 
 class MealHistoryBloc extends Bloc<MealHistoryEvent, MealHistoryState> {
-  /// TODO: مرّر التوكن الحقيقي عند إنشاء الـ Bloc (نفس نمط باقي الـ Blocs).
-  final String? authToken;
+  /// نحتفظ بمرجع AuthCubit نفسه (مو بالتوكن كنص جامد) حتى نقرأ التوكن
+  /// الحالي دائمًا لحظة كل طلب، بدل توكن قديم يُحفظ لحظة الإنشاء فقط.
+  /// هذا ضروري لأن MealHistoryBloc عادة Bloc طويل العمر (مزوّد مرة وحدة
+  /// بجذر التطبيق)، فلو تغيّر التوكن (تسجيل خروج ثم دخول من جديد) بدون
+  /// إعادة إنشاء الـ Bloc، كان بيضل يستخدم التوكن القديم ويعطي 401.
+  final AuthCubit authCubit;
 
-  MealHistoryBloc({this.authToken}) : super(const MealHistoryState()) {
+  MealHistoryBloc({required this.authCubit}) : super(const MealHistoryState()) {
     on<HistoryRequested>(_onHistoryRequested);
     on<PlanDetailRequested>(_onPlanDetailRequested);
+  }
+
+  String? get _currentToken {
+    final authState = authCubit.state;
+    return authState is AuthSuccess ? authState.user.token : null;
   }
 
   Future<void> _onHistoryRequested(
     HistoryRequested event,
     Emitter<MealHistoryState> emit,
   ) async {
-    if (authToken == null || authToken!.isEmpty) {
+    final token = _currentToken;
+    if (token == null || token.isEmpty) {
       emit(state.copyWith(
         listStatus: AsyncStatus.failure,
         listErrorMessage: 'يجب تسجيل الدخول أولاً',
@@ -99,7 +111,7 @@ class MealHistoryBloc extends Bloc<MealHistoryEvent, MealHistoryState> {
 
     emit(state.copyWith(listStatus: AsyncStatus.loading));
 
-    final result = await PlansApiService.getPlans(token: authToken!);
+    final result = await PlansApiService.getPlans(token: token);
 
     if (result.isSuccess && result.data != null) {
       emit(state.copyWith(
@@ -118,7 +130,8 @@ class MealHistoryBloc extends Bloc<MealHistoryEvent, MealHistoryState> {
     PlanDetailRequested event,
     Emitter<MealHistoryState> emit,
   ) async {
-    if (authToken == null || authToken!.isEmpty) {
+    final token = _currentToken;
+    if (token == null || token.isEmpty) {
       emit(state.copyWith(
         detailStatus: AsyncStatus.failure,
         detailErrorMessage: 'يجب تسجيل الدخول أولاً',
@@ -130,7 +143,7 @@ class MealHistoryBloc extends Bloc<MealHistoryEvent, MealHistoryState> {
 
     final result = await PlansApiService.getPlanDetail(
       planId: event.planId,
-      token: authToken!,
+      token: token,
     );
 
     if (result.isSuccess && result.data != null) {

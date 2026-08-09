@@ -5,7 +5,6 @@ import '../../../core/services/plan_api_service.dart';
 import '../../recommendations/models/meal_model.dart';
 import '../models/meal_request_model.dart';
 
-// ==================== Events ====================
 
 abstract class MealRequestEvent extends Equatable {
   const MealRequestEvent();
@@ -105,7 +104,7 @@ class MealRequestState extends Equatable {
     this.generatedPlan,
   });
 
-  bool get isBudgetValid => budget != null && budget! > 0;
+  bool get isBudgetValid => budget != null && budget! >= 0;
   int get daysPerMeal => spreadOverTwoDays ? 2 : 1;
 
   MealRequestState copyWith({
@@ -137,17 +136,17 @@ class MealRequestState extends Equatable {
 
   @override
   List<Object?> get props => [
-    budget,
-    budgetTouched,
-    servings,
-    numberOfMeals,
-    spreadOverTwoDays,
-    prepTime,
-    availableIngredients,
-    status,
-    errorMessage,
-    generatedPlan,
-  ];
+        budget,
+        budgetTouched,
+        servings,
+        numberOfMeals,
+        spreadOverTwoDays,
+        prepTime,
+        availableIngredients,
+        status,
+        errorMessage,
+        generatedPlan,
+      ];
 }
 
 // ==================== Bloc ====================
@@ -192,9 +191,22 @@ class MealRequestBloc extends Bloc<MealRequestEvent, MealRequestState> {
       emit(state.copyWith(prepTime: event.value));
     });
     on<IngredientAdded>((event, emit) {
-      emit(state.copyWith(
-        availableIngredients: [...state.availableIngredients, event.ingredient],
-      ));
+      final existingIndex = state.availableIngredients.indexWhere(
+        (i) => i.name.trim() == event.ingredient.name.trim(),
+      );
+      if (existingIndex != -1) {
+        // نفس المكوّن مضاف سابقًا: ندمج الكميات بدل إضافة سطر مكرر.
+        final updated = [...state.availableIngredients];
+        final existing = updated[existingIndex];
+        updated[existingIndex] = existing.copyWith(
+          quantity: existing.quantity + event.ingredient.quantity,
+        );
+        emit(state.copyWith(availableIngredients: updated));
+      } else {
+        emit(state.copyWith(
+          availableIngredients: [...state.availableIngredients, event.ingredient],
+        ));
+      }
     });
     on<IngredientRemoved>((event, emit) {
       final updated = [...state.availableIngredients]..removeAt(event.index);
@@ -220,9 +232,9 @@ class MealRequestBloc extends Bloc<MealRequestEvent, MealRequestState> {
   }
 
   Future<void> _onSubmitted(
-      PlanGenerationSubmitted event,
-      Emitter<MealRequestState> emit,
-      ) async {
+    PlanGenerationSubmitted event,
+    Emitter<MealRequestState> emit,
+  ) async {
     emit(state.copyWith(budgetTouched: true));
     if (!state.isBudgetValid) return;
 
