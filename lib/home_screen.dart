@@ -55,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     context.read<MealHistoryBloc>().add(const HistoryRequested());
+    context.read<FamilyBloc>().add(FamilyProfileRequested());
   }
 
   @override
