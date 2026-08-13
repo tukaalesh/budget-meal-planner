@@ -37,8 +37,9 @@ class _AppState extends State<App> {
           create: (_) => MealRequestBloc(),
         ),
         BlocProvider(
-  create: (context) => MealHistoryBloc(authCubit: context.read<AuthCubit>()),
-),
+          create: (context) =>
+              MealHistoryBloc(authCubit: context.read<AuthCubit>()),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

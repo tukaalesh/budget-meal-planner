@@ -1,5 +1,6 @@
 // ignore_for_file: unused_element, unused_local_variable, prefer_const_constructors, deprecated_member_use, prefer_const_literals_to_create_immutables
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -71,12 +72,13 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.divider)),
+            border: Border(
+                top: BorderSide(color: AppColors.divider.withOpacity(0.6))),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 16,
-                offset: Offset(0, -4),
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
               ),
             ],
           ),
@@ -87,32 +89,32 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               height: 64,
-              indicatorColor: AppColors.primary.withOpacity(0.1),
+              indicatorColor: AppColors.primary.withOpacity(0.12),
               destinations: [
                 NavigationDestination(
                   icon: Icon(Icons.home_outlined, color: AppColors.textHint),
                   selectedIcon:
-                      Icon(Icons.home_rounded, color: AppColors.accent),
+                      Icon(Icons.home_rounded, color: AppColors.primary),
                   label: 'الرئيسية',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.calendar_month_outlined,
                       color: AppColors.textHint),
                   selectedIcon: Icon(Icons.calendar_month_rounded,
-                      color: AppColors.accent),
+                      color: AppColors.primary),
                   label: 'الخطة',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.history_outlined, color: AppColors.textHint),
                   selectedIcon:
-                      Icon(Icons.history_rounded, color: AppColors.accent),
+                      Icon(Icons.history_rounded, color: AppColors.primary),
                   label: 'السجل',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline_rounded,
                       color: AppColors.textHint),
                   selectedIcon:
-                      Icon(Icons.person_rounded, color: AppColors.accent),
+                      Icon(Icons.person_rounded, color: AppColors.primary),
                   label: 'الملف',
                 ),
               ],
@@ -149,78 +151,73 @@ class _DashboardTab extends StatelessWidget {
             final recentPlans = histState.listStatus == AsyncStatus.success
                 ? histState.plans.take(3).toList()
                 : <PlanSummary>[];
-            // مجموع عدد الوجبات عبر كل الخطط المحفوظة (بديل "عدد الوجبات
-            // المحفوظة" بما أن الـ API يرجع خططًا لا وجبات مفردة).
-            final mealsCount = histState.plans
-                .fold<int>(0, (sum, p) => sum + p.numberOfMeals);
+            // مجموع عدد الوجبات عبر كل الخطط المحفوظة
+            final mealsCount =
+                histState.plans.fold<int>(0, (sum, p) => sum + p.numberOfMeals);
 
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
                 // ── Header ───────────────────────────────────────
-
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      // ── Hero CTA: weekly plan ─────────────────
-                      _WeeklyPlanHero(
+                      // ── Hero Slider: App Benefits ───────────
+                      _HeroBenefitsSlider(
                         onTap: () {
                           final homeState = context
                               .findAncestorStateOfType<_HomeScreenState>();
                           homeState?.switchToTab(1);
                         },
                       ),
-                      SizedBox(height: 28),
+                      const SizedBox(height: 28),
 
                       // ── Stats row ──────────────────────────────
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatTile(
-                              icon: Icons.restaurant_rounded,
-                              value: '$mealsCount',
-                              label: 'وجبة محفوظة',
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: _StatTile(
-                              icon: Icons.payments_outlined,
-                              value: '250',
-                              label: 'متوسط ل.س / وجبة',
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: _StatTile(
-                              icon: Icons.timer_outlined,
-                              value: '٣٥',
-                              label: 'دقيقة بالمتوسط',
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: _StatTile(
+                      //         icon: Icons.restaurant_rounded,
+                      //         value: '$mealsCount',
+                      //         label: 'وجبة محفوظة',
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 12),
+                      //     Expanded(
+                      //       child: _StatTile(
+                      //         icon: Icons.payments_outlined,
+                      //         value: '250',
+                      //         label: 'متوسط ل.س / وجبة',
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 12),
+                      //     Expanded(
+                      //       child: _StatTile(
+                      //         icon: Icons.timer_outlined,
+                      //         value: '٣٥',
+                      //         label: 'دقيقة بالمتوسط',
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
+                      // const SizedBox(height: 10),
 
                       // ── Tips ───────────────────────────────────
-                      // SectionHeader(
-                      //     title: 'نصائح اليوم', subtitle: 'لطبخ أسهل وألذ'),
-                      SizedBox(height: 8),
                       _TipCard(
                         icon: Icons.lightbulb_outline_rounded,
                         title: 'وفّر وقتك',
                         body:
                             'جهّز المقادير مسبقًا قبل البدء بالطبخ لتقليل الفوضى وتسريع التحضير.',
                       ),
-                      // SizedBox(height: 12),
-                      // _TipCard(
-                      //   icon: Icons.local_fire_department_outlined,
-                      //   title: 'سر النكهة الشامية',
-                      //   body:
-                      //       'البهارات الأصيلة كالهيل والقرفة والكزبرة هي مفتاح الطعم السوري الحقيقي.',
-                      // ),
-                      SizedBox(height: 17),
+                      const SizedBox(height: 8),
+                      _TipCard(
+                        icon: Icons.restaurant_menu_rounded,
+                        title: 'وصفات متنوعة',
+                        body:
+                            'استكشف أكثر من 100 طبخة متنوعة تناسب جميع الأذواق والمناسبات.',
+                      ),
+                      const SizedBox(height: 17),
 
                       // ── Recent meals ───────────────────────────
                       if (recentPlans.isNotEmpty) ...[
@@ -242,9 +239,9 @@ class _DashboardTab extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         ...recentPlans.map((plan) => Padding(
-                              padding: EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.only(bottom: 10),
                               child: _RecentMealTile(plan: plan),
                             )),
                       ] else
@@ -256,7 +253,7 @@ class _DashboardTab extends StatelessWidget {
                           },
                         ),
 
-                      SizedBox(height: 32),
+                      const SizedBox(height: 32),
                     ]),
                   ),
                 ),
@@ -269,105 +266,310 @@ class _DashboardTab extends StatelessWidget {
   }
 }
 
-/// Hero call-to-action card prompting the user to start their weekly meal plan.
-class _WeeklyPlanHero extends StatelessWidget {
+// ── Hero Benefits Slider (التصميم الحديث للقسم الأعلى) ────────────────────────
+
+class _HeroBenefitsSlider extends StatefulWidget {
   final VoidCallback onTap;
-  const _WeeklyPlanHero({required this.onTap});
+  const _HeroBenefitsSlider({required this.onTap});
+
+  @override
+  State<_HeroBenefitsSlider> createState() => _HeroBenefitsSliderState();
+}
+
+class _HeroBenefitsSliderState extends State<_HeroBenefitsSlider> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+  Timer? _autoPlayTimer;
+
+  // 🎨 تم ربط القائمة بألوان AppColors المعتمدة في التطبيق
+  List<Map<String, dynamic>> get _slides => [
+        {
+          'badge': 'توفير وميزانية',
+          'title': 'وجبات تناسب ميزانيتك',
+          'subtitle':
+              'خطط لوجبات أسبوعية مرنة واقتصادية تجنبك الهدر المالي والمصاريف الزائدة.',
+          'icon': Icons.account_balance_wallet_rounded,
+          'gradient': [
+            AppColors.accent,
+            AppColors.accentLight
+          ], // تدرج الأخضر الزمردي المنعش
+          'accentColor': AppColors.cardBg,
+        },
+        {
+          'badge': 'صحة وتغذية',
+          'title': 'أكل مراعي للعناصر الغذائية',
+          'subtitle':
+              'اقتراحات متوازنة تضمن حصول عائلتك على العناصر الغذائية اللازمة يومياً.',
+          'icon': Icons.health_and_safety_rounded,
+          'gradient': [
+            AppColors.accent,
+            AppColors.accentLight
+          ], // تدرج الأخضر الزمردي المنعش
+          'accentColor': AppColors.cardBg,
+        },
+        {
+          'badge': 'استغلال المكونات',
+          'title': 'طبخ أسهل بالمكونات المتاحة',
+          'subtitle':
+              'استغل المواد الموجودة في مطبخك حالياً وحولها إلى وجبات شهية بكل سهولة.',
+          'icon': Icons.kitchen_rounded,
+          'gradient': [
+            AppColors.accent,
+            AppColors.accentLight
+          ], // تدرج الأخضر الزمردي المنعش
+          'accentColor': AppColors.cardBg,
+        },
+      ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_pageController.hasClients) {
+        int nextPage = (_currentPage + 1) % _slides.length;
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoPlayTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final slides = _slides;
+    return Column(
+      children: [
+        SizedBox(
+          height: 195,
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: slides.length,
+            itemBuilder: (context, index) {
+              final slide = slides[index];
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                child: _SlideCard(
+                  slide: slide,
+                  onTap: widget.onTap,
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Indicators
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            slides.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 6,
+              width: _currentPage == index ? 22 : 6,
+              decoration: BoxDecoration(
+                color: _currentPage == index
+                    ? AppColors.primary
+                    : AppColors.primary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SlideCard extends StatelessWidget {
+  final Map<String, dynamic> slide;
+  final VoidCallback onTap;
+
+  const _SlideCard({
+    required this.slide,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Color> gradientColors = slide['gradient'] as List<Color>;
+    final Color accentColor = slide['accentColor'] as Color;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: AppColors.accent,
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+          ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppColors.accent.withOpacity(0.25),
-              blurRadius: 24,
-              offset: Offset(0, 10),
+              color: gradientColors.first.withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Stack(
+          clipBehavior: Clip.antiAlias,
           children: [
-            // Decorative background circle
+            // Decorative floating circles
             Positioned(
-              left: -20,
+              left: -30,
               top: -30,
               child: Container(
-                width: 120,
-                height: 120,
+                width: 130,
+                height: 130,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.06),
+                  color: Colors.white.withOpacity(0.1),
                 ),
               ),
             ),
             Positioned(
-              left: 30,
+              right: -20,
               bottom: -40,
               child: Container(
-                width: 90,
-                height: 90,
+                width: 110,
+                height: 110,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withOpacity(0.08),
                 ),
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [],
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'خطّط لوجباتك الأسبوعية',
-                  style: GoogleFonts.cairo(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.3,
-                  ),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  "استفد من مكوناتك الحالية، وسنساعدك في اختيار وجبات تناسب ميزانيتك",
-                  style: GoogleFonts.cairo(
-                    fontSize: 12.5,
-                    color: Colors.white.withOpacity(0.8),
-                    height: 1.6,
-                  ),
-                ),
-                SizedBox(height: 18),
-                Row(
-                  children: [
-                    Text(
-                      'ابدأ الآن',
-                      style: GoogleFonts.cairo(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+
+            // Card Content
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Top Row: Badge & Icon
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              slide['icon'] as IconData,
+                              size: 13,
+                              color: accentColor,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              slide['badge'] as String,
+                              style: GoogleFonts.cairo(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 6),
-                    Container(
-                      padding: EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          slide['icon'] as IconData,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
-                      child: Icon(Icons.arrow_back_rounded,
-                          color: AppColors.accentLight, size: 14),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+
+                  // Middle: Title & Subtitle
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        slide['title'] as String,
+                        style: GoogleFonts.cairo(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        slide['subtitle'] as String,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.cairo(
+                          fontSize: 11.5,
+                          color: Colors.white.withOpacity(0.92),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Bottom: CTA Link
+                  Row(
+                    children: [
+                      Text(
+                        'ابدأ الآن',
+                        style: GoogleFonts.cairo(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: accentColor,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 12,
+                        color: accentColor,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
