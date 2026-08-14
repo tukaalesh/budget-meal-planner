@@ -37,12 +37,9 @@ class _AppState extends State<App> {
           create: (_) => MealRequestBloc(),
         ),
         BlocProvider(
-            create: (context) {
-              final authState = context.read<AuthCubit>().state;
-              final token = authState is AuthSuccess ? authState.user.token : null;
-              return MealHistoryBloc(authToken: token);
-            },
-          )
+          create: (context) =>
+              MealHistoryBloc(authCubit: context.read<AuthCubit>()),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

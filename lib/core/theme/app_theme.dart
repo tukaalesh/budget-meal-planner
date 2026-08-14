@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFFB5451B);
-  static const Color primaryLight = Color(0xFFD4622E);
+  static const Color primary = Color(0XFF465973);
+  static const Color primaryLight = Color(0xFF6F635B);
   static const Color primaryDark = Color(0xFF8B3214);
   static const Color secondary = Color(0xFFF5A623);
   static const Color secondaryLight = Color(0xFFFFC84A);
-  static const Color accent = Color(0xFF2E7D52);
-  static const Color accentLight = Color(0xFF4CAF78);
+  static const Color accent = Color(0XFF465973);
+  static const Color accentLight = Color(0xff7c8ea6);
 
   static const Color background = Color(0xFFFAF7F2);
   static const Color surface = Color(0xFFFFFFFF);
@@ -185,7 +185,7 @@ class AppTheme {
         labelStyle:
             GoogleFonts.cairo(color: AppColors.textSecondary, fontSize: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.cardBg,
         elevation: 0,
         shape: RoundedRectangleBorder(

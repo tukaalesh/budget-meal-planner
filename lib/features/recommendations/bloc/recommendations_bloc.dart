@@ -6,6 +6,7 @@ import '../../meal_request/models/meal_request_model.dart';
 import '../models/meal_model.dart';
 import '../models/shopping_list_model.dart';
 
+// ==================== Events ====================
 
 abstract class RecommendationsEvent extends Equatable {
   const RecommendationsEvent();
@@ -28,16 +29,23 @@ class PlanAcceptRequested extends RecommendationsEvent {
   const PlanAcceptRequested();
 }
 
+// ==================== State ====================
 
 enum AsyncStatus { idle, loading, success, failure }
 
 class RecommendationsState extends Equatable {
+  /// معلومات الطلب الأصلي (الميزانية، عدد الأشخاص...) - تبقى ثابتة
+  /// وتُستخدم في كل من إعادة التوليد وطلب القبول.
   final MealRequestModel requestModel;
 
+  /// الخطة المعروضة حاليًا.
   final GeneratedPlanModel plan;
 
+  /// معرّفات الوجبات التي أعجبت المستخدم بالجولة الحالية فقط (meal_id).
   final Set<int> likedMealIds;
 
+  /// معرّفات كل الوجبات التي لم تعجب المستخدم عبر كل جولات إعادة الطلب
+  /// (تراكمية) - حتى لا تُقترح عليه مرة ثانية أبدًا.
   final Set<int> excludedMealIds;
 
   final AsyncStatus regenerateStatus;
@@ -177,8 +185,10 @@ class RecommendationsBloc
       emit(state.copyWith(
         regenerateStatus: AsyncStatus.success,
         plan: result.data,
-        // نفرّغ إعجابات هذه الجولة فقط، ونحفظ الاستبعادات التراكمية.
-        likedMealIds: const {},
+        // نُبقي likedMealIds كما هي (بدون تصفير) لأن هذه الوجبات أُرسلت
+        // كـ required_meals، فهي مضمونة الظهور بالخطة الجديدة، ويجب أن
+        // يظل قلبها أحمر تلقائيًا حتى لا يُضطر المستخدم لتحديدها من جديد
+        // كل مرة. يبقى بإمكانه إزالة الإعجاب عنها يدويًا لو غيّر رأيه.
         excludedMealIds: cumulativeExcludedIds,
       ));
     } else {
