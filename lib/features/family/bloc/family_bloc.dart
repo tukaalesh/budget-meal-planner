@@ -243,6 +243,7 @@ class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
   ) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    print('TOKEN = $token');
     if (token == null) {
       emit(FamilyFailure('حدث خطأ ما يُرجى إعادة المحاولة'));
       return;
