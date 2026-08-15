@@ -55,7 +55,10 @@ class _MealRequestViewState extends State<_MealRequestView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('طلب خطة وجبات')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+          backgroundColor: AppColors.background,
+          title: const Text('طلب خطة وجبات')),
       body: BlocConsumer<MealRequestBloc, MealRequestState>(
         listenWhen: (prev, curr) => prev.status != curr.status,
         listener: (context, state) {
@@ -130,7 +133,8 @@ class _MealRequestViewState extends State<_MealRequestView> {
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
                   activeColor: AppColors.primary,
-                  title: const Text('هل تفضل أن تكون الأكلة الواحدة على يومين؟'),
+                  title:
+                      const Text('هل تفضل أن تكون الأكلة الواحدة على يومين؟'),
                   value: state.spreadOverTwoDays,
                   onChanged: (v) =>
                       bloc.add(SpreadOverTwoDaysToggled(v ?? false)),
@@ -344,7 +348,8 @@ class _IngredientsSection extends StatelessWidget {
           ),
         OutlinedButton.icon(
           onPressed: () async {
-            final result = await Navigator.of(context).push<AvailableIngredient>(
+            final result =
+                await Navigator.of(context).push<AvailableIngredient>(
               MaterialPageRoute(builder: (_) => const _AddIngredientPage()),
             );
             if (result != null) {
@@ -387,7 +392,8 @@ class _IngredientRowState extends State<_IngredientRow> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: _formatQty(widget.ingredient.quantity));
+    _controller =
+        TextEditingController(text: _formatQty(widget.ingredient.quantity));
   }
 
   @override
@@ -515,7 +521,10 @@ class _AddIngredientPageState extends State<_AddIngredientPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('إضافة مكوّن')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+          backgroundColor: AppColors.background,
+          title: const Text('إضافة مكوّن')),
       body: Column(
         children: [
           Padding(
@@ -562,7 +571,8 @@ class _AddIngredientPageState extends State<_AddIngredientPage> {
     }
     return ListView.separated(
       itemCount: _results.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.divider),
+      separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: AppColors.divider),
       itemBuilder: (context, index) {
         final option = _results[index];
         return ListTile(

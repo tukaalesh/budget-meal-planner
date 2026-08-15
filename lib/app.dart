@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_cubit.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_repository.dart';
 import 'package:sho_htghadona/features/auth/bloc/auth_state.dart';
@@ -31,7 +30,9 @@ class _AppState extends State<App> {
           )..checkAuth(),
         ),
         BlocProvider(
-          create: (_) => FamilyBloc(),
+          create: (context) => FamilyBloc(
+            authCubit: context.read<AuthCubit>(),
+          ),
         ),
         BlocProvider(
           create: (_) => MealRequestBloc(),
@@ -50,30 +51,24 @@ class _AppState extends State<App> {
         initialRoute: '/',
         builder: (context, child) {
           return BlocListener<AuthCubit, AuthState>(
-            listener: (context, state) async {
+            listener: (context, state) {
               if (state is AuthSuccess) {
-                final prefs = await SharedPreferences.getInstance();
-
-                final key = 'family_completed_${state.user.id}';
-
-                final completed = prefs.getBool(key) ?? false;
-
-                if (completed) {
+                if (state.user.familyProfileCompleted) {
                   navigatorKey.currentState?.pushNamedAndRemoveUntil(
                     '/home',
-                    (_) => false,
+                    (route) => false,
                   );
                 } else {
                   navigatorKey.currentState?.pushNamedAndRemoveUntil(
                     '/family',
-                    (_) => false,
+                    (route) => false,
                   );
                 }
               } else if (state is AuthUnauthenticated ||
                   state is AuthLoggedOut) {
                 navigatorKey.currentState?.pushNamedAndRemoveUntil(
                   '/',
-                  (_) => false,
+                  (route) => false,
                 );
               }
             },

@@ -7,8 +7,18 @@ import '../models/plan_history_model.dart';
 import 'plan_history_detail_screen.dart';
 
 const _kMonthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 String formatPlanDate(DateTime date) {
@@ -50,7 +60,10 @@ class _MealHistoryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('سجل الخطط السابقة')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+          backgroundColor: AppColors.background,
+          title: const Text('سجل الخطط السابقة')),
       body: BlocBuilder<MealHistoryBloc, MealHistoryState>(
         builder: (context, state) {
           final bloc = context.read<MealHistoryBloc>();
@@ -237,7 +250,8 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: onRetry, child: const Text('إعادة المحاولة')),
+            ElevatedButton(
+                onPressed: onRetry, child: const Text('إعادة المحاولة')),
           ],
         ),
       ),

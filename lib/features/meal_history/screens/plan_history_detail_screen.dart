@@ -13,7 +13,10 @@ class PlanHistoryDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تفاصيل الخطة')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+          backgroundColor: AppColors.background,
+          title: const Text('تفاصيل الخطة')),
       body: BlocBuilder<MealHistoryBloc, MealHistoryState>(
         builder: (context, state) {
           if (state.detailStatus == AsyncStatus.loading ||
@@ -41,9 +44,11 @@ class PlanHistoryDetailScreen extends StatelessWidget {
               const SizedBox(height: 10),
               for (final meal in plan.meals) _HistoryMealCard(meal: meal),
               const SizedBox(height: 20),
-              Text('قائمة التسوق', style: Theme.of(context).textTheme.titleLarge),
+              Text('قائمة التسوق',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 10),
-              for (final item in plan.shoppingList) _ShoppingItemTile(item: item),
+              for (final item in plan.shoppingList)
+                _ShoppingItemTile(item: item),
               const SizedBox(height: 12),
               Card(
                 color: AppColors.surfaceVariant,
@@ -59,7 +64,9 @@ class PlanHistoryDetailScreen extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
-                            ?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                            ?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700),
                       ),
                     ],
                   ),
@@ -103,8 +110,8 @@ class _SummaryCard extends StatelessWidget {
                 Text('التكلفة الفعلية', style: textTheme.titleMedium),
                 Text(
                   plan.estimatedCost.toStringAsFixed(0),
-                  style: textTheme.titleLarge
-                      ?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                  style: textTheme.titleLarge?.copyWith(
+                      color: AppColors.primary, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -158,20 +165,23 @@ class _HistoryMealCard extends StatelessWidget {
               children: [
                 Text(meal.name, style: textTheme.titleLarge),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text('اليوم ${meal.day}',
-                      style: textTheme.labelMedium?.copyWith(color: AppColors.primary)),
+                      style: textTheme.labelMedium
+                          ?.copyWith(color: AppColors.primary)),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               'التكلفة: ${meal.estimatedCost.toStringAsFixed(0)}',
-              style: textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              style:
+                  textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
             ...meal.ingredients.map(
@@ -179,12 +189,14 @@ class _HistoryMealCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   children: [
-                    const Icon(Icons.circle, size: 5, color: AppColors.textHint),
+                    const Icon(Icons.circle,
+                        size: 5, color: AppColors.textHint),
                     const SizedBox(width: 8),
                     Expanded(child: Text(i.name, style: textTheme.bodyMedium)),
                     Text(
                       '${i.quantity.toStringAsFixed(0)} ${i.unit}',
-                      style: textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                      style: textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -214,11 +226,14 @@ class _ShoppingItemTile extends StatelessWidget {
             color: AppColors.secondary.withOpacity(0.15),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.shopping_basket_outlined, color: AppColors.secondary, size: 18),
+          child: const Icon(Icons.shopping_basket_outlined,
+              color: AppColors.secondary, size: 18),
         ),
         title: Text(item.name),
-        subtitle: Text('${item.missingQuantity.toStringAsFixed(0)} ${item.unit}'),
-        trailing: Text(item.estimatedPrice.toStringAsFixed(0), style: textTheme.titleSmall),
+        subtitle:
+            Text('${item.missingQuantity.toStringAsFixed(0)} ${item.unit}'),
+        trailing: Text(item.estimatedPrice.toStringAsFixed(0),
+            style: textTheme.titleSmall),
       ),
     );
   }
@@ -241,7 +256,8 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: onRetry, child: const Text('إعادة المحاولة')),
+            ElevatedButton(
+                onPressed: onRetry, child: const Text('إعادة المحاولة')),
           ],
         ),
       ),

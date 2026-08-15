@@ -71,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.background,
             border: Border(
                 top: BorderSide(color: AppColors.divider.withOpacity(0.6))),
             boxShadow: [
@@ -160,7 +160,7 @@ class _DashboardTab extends StatelessWidget {
               slivers: [
                 // ── Header ───────────────────────────────────────
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 45, 20, 0),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       // ── Hero Slider: App Benefits ───────────
@@ -810,7 +810,7 @@ class _ProfileTab extends StatelessWidget {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.background,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
@@ -834,7 +834,7 @@ class _ProfileTab extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
+                  foregroundColor: AppColors.textPrimary,
                 ),
                 child: Text(
                   'إلغاء',
@@ -848,7 +848,7 @@ class _ProfileTab extends StatelessWidget {
                   authCubit.logout();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.error,
+                  backgroundColor: AppColors.accent,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
