@@ -67,8 +67,6 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
       allergies: _allergies.toList(),
       availableBasicIngredients: _availableBasics.toList(),
     );
-
-    // << جديد: تفريق بين إنشاء وتعديل
     if (_isEditMode) {
       context.read<FamilyBloc>().add(
             FamilyInfoEdited(family: family, token: token),
@@ -112,10 +110,23 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
         appBar: AppBar(
           title: Text(_isEditMode
               ? 'تعديل معلومات العائلة'
-              : 'معلومات العائلة'), // << عدّل
+              : 'معلومات العائلة'), 
           centerTitle: false,
           backgroundColor: AppColors.background,
           elevation: 0,
+          leading: IconButton(
+    icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
+    onPressed: () {
+      if (_isEditMode) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      } else {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/',
+          (route) => false,
+        );
+      }})
         ),
         body: BlocConsumer<FamilyBloc, FamilyState>(
           listener: (context, state) {
@@ -133,7 +144,6 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
             }
 
             if (state is FamilySuccess) {
-              // إغلاق Loading Dialog فقط
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
@@ -144,8 +154,6 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
                   backgroundColor: AppColors.accent,
                 ),
               );
-
-              // إذا كان تعديل، نرجع للصفحة السابقة
               if (_isEditMode) {
                 if (Navigator.of(context).canPop()) {
                   Navigator.of(context).pop();
@@ -154,7 +162,7 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
             }
 
             if (state is FamilyFailure) {
-              // إغلاق Loading Dialog
+
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
